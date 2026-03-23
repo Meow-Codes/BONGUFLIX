@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type ReactNode, use } from "react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import SpiralIcons from "./intro/SpiralIcons";
 import CinematicRays from "./intro/CinematicRays";
