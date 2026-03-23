@@ -1,12 +1,51 @@
-import express from "express";
+import dotenv from "dotenv";
+dotenv.config(); // Must be first — loads env before any other import reads it
+
+import express, { Request, Response } from "express";
+import cors from "cors";
+
+import { initDB } from "./config/db.js";
+import authRoutes from "./routes/auth.routes.js";
+import userRoutes from "./routes/user.routes.js";
+import recommendRoutes from "./routes/recommend.routes.js";
 
 const app = express();
-const PORT = 6942;
+const PORT = Number(process.env.PORT) || 6942;
 
-app.get("/", (req, res) => {
-    res.send("Yep BONGUFLIX Backend is working fine!!!")
+const allowedOrigin = process.env.FRONTEND_URL || "http://localhost:3000";
+
+app.use(cors({ origin: allowedOrigin, credentials: true }));
+app.use(express.json());
+
+// Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/recommend", recommendRoutes);
+
+// Base
+app.get("/", (_req: Request, res: Response) => {
+  res.send("We got the api + render db. Now we can just cook");
 });
 
-app.listen(PORT || 6942, () => {
-    console.log(`Server is running on port ${PORT}`);
+// Health checks
+app.get("/healthz", (_req: Request, res: Response) => {
+  res.send("API is healthy and ready to serve requests!");
 });
+
+// Readiness probe — useful for container orchestration (K8s, Render, etc.)
+app.get("/readyz", (_req: Request, res: Response) => {
+  res.send("API is ready to race!!!!!!!");
+});
+
+// Initialize DB tables on startup then listen
+initDB()
+  .then(() => {
+    console.log("DB tables initialized");
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("DB init failed — server will not start:", err);
+    process.exit(1);
+  });
