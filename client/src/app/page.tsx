@@ -60,7 +60,7 @@ export default function Home() {
         setSubmitted(true);
 
         setTimeout(() => {
-          window.location.href = `http://localhost:3000${data.redirect}`;
+          window.location.href = data.redirect;
         }, 800);
       }
     } catch (err: any) {
