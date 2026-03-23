@@ -38,7 +38,7 @@ export default function DashboardPage() {
       }
 
       try {
-        const res = await fetch(`http://localhost:6942/api/user/${slug}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/${slug}`, {
           headers: {
             "X-Session-Id": sessionId,
           },
@@ -71,7 +71,7 @@ export default function DashboardPage() {
     try {
       const sessionId = localStorage.getItem("sessionId");
 
-      const res = await fetch("http://localhost:6942/api/recommend", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/recommend`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
