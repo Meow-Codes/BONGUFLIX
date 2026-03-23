@@ -25,7 +25,7 @@ export default function Home() {
     return () => clearTimeout(t);
   }, []);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!username.trim()) {
       inputRef.current?.focus();
       return;
@@ -33,16 +33,42 @@ export default function Home() {
 
     setIsLoading(true);
 
-    setTimeout(() => {
-      setIsLoading(false);
-      setSubmitted(true);
+    try {
+      const response = await fetch("http://localhost:6942/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username }),
+      });
 
-      setTimeout(() => {
-        setSubmitted(false);
-        setUsername("");
-        console.log("Redirecting with username:", username);
-      }, 1200);
-    }, 1800);
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Login failed");
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Option A: store sessionId in localStorage (simple for demo)
+        localStorage.setItem("sessionId", data.sessionId);
+
+        // Option B: pass in URL (more stateless, but longer URL)
+        // window.location.href = `http://localhost:3000${data.redirect}?sid=${data.sessionId}`;
+
+        // We'll use localStorage for cleaner URLs
+        setSubmitted(true);
+
+        setTimeout(() => {
+          window.location.href = `http://localhost:3000${data.redirect}`;
+        }, 800);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Something went wrong. Is backend running?");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
