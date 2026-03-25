@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import "@fontsource/bebas-neue"; // Official Netflix-like font
+import "@fontsource/bebas-neue";
+import { toast } from "react-hot-toast";
 
-// Simple floating particle
 const Particle = ({ style }: { style: React.CSSProperties }) => (
   <div className="absolute rounded-full pointer-events-none" style={style} />
 );
@@ -25,60 +25,12 @@ export default function Home() {
     return () => clearTimeout(t);
   }, []);
 
-  const handleSubmit = async () => {
-    if (!username.trim()) {
-      inputRef.current?.focus();
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const response = await fetch(process.env.NEXT_PUBLIC_API_URL + "/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username }),
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "Login failed");
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Option A: store sessionId in localStorage (simple for demo)
-        localStorage.setItem("sessionId", data.sessionId);
-
-        // Option B: pass in URL (more stateless, but longer URL)
-        // window.location.href = `http://localhost:3000${data.redirect}?sid=${data.sessionId}`;
-
-        // We'll use localStorage for cleaner URLs
-        setSubmitted(true);
-
-        setTimeout(() => {
-          window.location.href = data.redirect;
-        }, 800);
-      }
-    } catch (err: any) {
-      console.error(err);
-      alert(err.message || "Something went wrong. Is backend running?");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      handleSubmit();
     }
   };
 
-  // Gentle floating particles — slower, less directional, more ambient
   useEffect(() => {
     const generated = Array.from({ length: 12 }, (_, i) => {
       const size = Math.random() * 3 + 1;
@@ -109,24 +61,19 @@ export default function Home() {
           75%  { transform: translate(-25px, -8px); }
           100% { transform: translate(0, 0); }
         }
-
         @keyframes fadeInDown {
           from { opacity: 0; transform: translateY(-24px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(36px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-
-        .navbar { animation: fadeInDown 0.9s cubic-bezier(0.16,1,0.3,1) both; }
+        .navbar  { animation: fadeInDown 0.9s cubic-bezier(0.16,1,0.3,1) both; }
         .hero    { animation: fadeInUp 1s cubic-bezier(0.16,1,0.3,1) 0.4s both; }
         .subtitle{ animation: fadeInUp 1s cubic-bezier(0.16,1,0.3,1) 0.7s both; }
         .form    { animation: fadeInUp 1s cubic-bezier(0.16,1,0.3,1) 1s both; }
-
         .text-red-netflix { color: #E50914; }
-
         .fill-hover {
           position: relative;
           display: inline-block;
@@ -137,15 +84,8 @@ export default function Home() {
           -webkit-text-fill-color: transparent;
           transition: background-position 0.55s cubic-bezier(0.215, 0.61, 0.355, 1);
         }
-
-        .fill-hover:hover {
-          background-position: left bottom;
-        }
-
-        .input-wrapper {
-          position: relative;
-        }
-
+        .fill-hover:hover { background-position: left bottom; }
+        .input-wrapper { position: relative; }
         .input-wrapper::after {
           content: '';
           position: absolute;
@@ -156,33 +96,16 @@ export default function Home() {
           transform-origin: center;
           transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);
         }
-
-        .input-wrapper.focused::after {
-          transform: scaleX(1);
-        }
-
-        .cta-btn {
-          transition: all 0.25s ease;
-        }
-
+        .input-wrapper.focused::after { transform: scaleX(1); }
+        .cta-btn { transition: all 0.25s ease; }
         .cta-btn:hover {
           transform: translateY(-2px);
           box-shadow: 0 10px 30px rgba(229,9,20,0.45);
         }
-
-        .cta-btn:active {
-          transform: translateY(0);
-        }
-
-        .cta-btn.success {
-          background: #16a34a !important;
-          box-shadow: 0 0 0 0 rgba(22,163,74,0.4);
-          animation: none;
-        }
+        .cta-btn:active { transform: translateY(0); }
       `}</style>
 
       <div className="relative h-screen w-full text-white overflow-hidden font-['Montserrat',sans-serif]">
-        {/* Background */}
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
@@ -191,16 +114,12 @@ export default function Home() {
             filter: "brightness(0.38) saturate(1.15)",
           }}
         />
-
-        {/* Soft vignette */}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent pointer-events-none" />
 
-        {/* Particles */}
         {particles.map((p) => (
           <Particle key={p.id} style={p.style} />
         ))}
 
-        {/* Navbar */}
         <nav className="absolute top-0 left-0 right-0 flex justify-between items-center px-6 md:px-16 py-8 z-20 navbar">
           <Link href="/">
             <h1
@@ -212,7 +131,6 @@ export default function Home() {
           </Link>
         </nav>
 
-        {/* Hero */}
         <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-5">
           <h1 className="hero text-4xl sm:text-4xl md:text-5xl lg:text-6xl font-black leading-tight tracking-tight max-w-5xl mb-6">
             <span className="fill-hover">Unlimited</span>{" "}
@@ -229,93 +147,53 @@ export default function Home() {
 
           <div className="form w-full max-w-xl mx-auto">
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-3 items-stretch sm:items-center">
-              <div
-                className={`input-wrapper flex-1 ${focused ? "focused" : ""}`}
-              >
-                <input
-                  ref={inputRef}
-                  type="text"
-                  placeholder="Enter your username…"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  onFocus={() => setFocused(true)}
-                  onBlur={() => setFocused(false)}
-                  onKeyDown={handleKeyDown}
-                  className="
-          w-full px-5 py-4 
-          rounded-lg 
-          bg-black/65 
-          border border-white/20 
-          text-white text-base md:text-lg 
-          placeholder-white/50 
-          focus:border-[#E50914]/70 
-          focus:bg-black/75 
-          focus:outline-none 
-          transition-all duration-200
-        "
-                  disabled={isLoading} // optional: disable input during loading
-                />
-              </div>
-
-              <button
-                onClick={handleSubmit}
-                disabled={isLoading || submitted}
-                className={`
-        cta-btn 
-        flex items-center justify-center gap-3
-        px-8 py-4 
-        rounded-lg 
-        font-bold text-base md:text-lg 
-        uppercase tracking-wide 
-        cursor-pointer 
-        whitespace-nowrap 
-        transition-all duration-200
-        disabled:cursor-not-allowed disabled:opacity-70
-        ${
-          isLoading
-            ? "bg-[#E50914]/80"
-            : submitted
-              ? "bg-green-600 hover:bg-green-700"
-              : "bg-[#E50914] hover:bg-[#f40612]"
-        }
-      `}
-                style={{ minWidth: "180px" }}
-              >
-                {isLoading ? (
-                  <>
-                    <svg
-                      className="animate-spin h-5 w-5 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                    Processing...
-                  </>
-                ) : submitted ? (
-                  <>✓ Redirecting...</>
-                ) : (
-                  "Get Started"
-                )}
-              </button>
+              <Link href="/auth" passHref>
+                <button
+                  disabled={isLoading || submitted}
+                  className={`cta-btn flex items-center justify-center gap-3 px-8 py-4 rounded-lg font-bold text-base md:text-lg uppercase tracking-wide cursor-pointer whitespace-nowrap transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-70 ${
+                    isLoading
+                      ? "bg-[#E50914]/80"
+                      : submitted
+                        ? "bg-green-600 hover:bg-green-700"
+                        : "bg-[#E50914] hover:bg-[#f40612]"
+                  }`}
+                  style={{ minWidth: "180px" }}
+                >
+                  {isLoading ? (
+                    <>
+                      <svg
+                        className="animate-spin h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                      Processing...
+                    </>
+                  ) : submitted ? (
+                    <>✓ Redirecting...</>
+                  ) : (
+                    "Get Started"
+                  )}
+                </button>
+              </Link>
             </div>
           </div>
         </div>
 
-        {/* Bottom fade */}
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black to-transparent pointer-events-none z-10" />
       </div>
     </>

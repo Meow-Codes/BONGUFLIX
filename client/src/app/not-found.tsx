@@ -218,7 +218,7 @@ export default function NotFound() {
           60%  { background-position: 15% -30%; }
           70%  { background-position: 0% 30%; }
           80%  { background-position: 25% 10%; }
-          90%  { background-position: -10% 10'; }
+          90%  { background-position: -10% 10%; }
           100% { background-position: 0 0; }
         }
 

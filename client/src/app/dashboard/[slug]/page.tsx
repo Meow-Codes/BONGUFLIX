@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { toast } from "react-hot-toast";
 
 type UserData = {
   username: string;
@@ -85,7 +86,7 @@ export default function DashboardPage() {
       const data = await res.json();
       setRecommendations(data.recommendations || []);
     } catch (err: any) {
-      alert(err.message || "Recommendation failed");
+      toast.error(err.message || "Recommendation failed");
     } finally {
       setRecLoading(false);
     }

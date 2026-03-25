@@ -8,6 +8,7 @@ import { initDB } from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import recommendRoutes from "./routes/recommend.routes.js";
+import cookieParser from "cookie-parser";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 6942;
@@ -27,6 +28,7 @@ app.use(
   })
 );
 app.use(express.json());
+app.use(cookieParser());
 
 // Routes
 app.use("/api/auth", authRoutes);

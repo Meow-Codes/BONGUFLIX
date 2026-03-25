@@ -1,5 +1,4 @@
 import "dotenv/config";
-console.log("ENV CHECK:", process.env.DATABASE_URL);
 import { Pool } from "pg";
 
 if (!process.env.DATABASE_URL) {
@@ -8,7 +7,7 @@ if (!process.env.DATABASE_URL) {
 
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // Required for Render Postgres
+  ssl: { rejectUnauthorized: false },
 });
 
 export const initDB = async (): Promise<void> => {
@@ -16,6 +15,7 @@ export const initDB = async (): Promise<void> => {
     CREATE TABLE IF NOT EXISTS users (
       username TEXT PRIMARY KEY,
       slug TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
       created_at TIMESTAMP DEFAULT NOW(),
       last_active TIMESTAMP DEFAULT NOW(),
       preferences JSONB DEFAULT '{}'
@@ -25,8 +25,12 @@ export const initDB = async (): Promise<void> => {
       session_id TEXT PRIMARY KEY,
       username TEXT REFERENCES users(username) ON DELETE CASCADE,
       slug TEXT NOT NULL,
-      expires_at TIMESTAMP DEFAULT (NOW() + INTERVAL '7 days'),
+      expires_at TIMESTAMP DEFAULT (NOW() + INTERVAL '30 days'),
       created_at TIMESTAMP DEFAULT NOW()
     );
+
+    CREATE INDEX IF NOT EXISTS idx_sessions_expires ON user_sessions(expires_at);
+    CREATE INDEX IF NOT EXISTS idx_users_slug ON users(slug);
   `);
+  console.log("Database tables initialized with password support");
 };
