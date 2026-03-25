@@ -14,7 +14,10 @@ export const registerUser = async (username: string, password: string) => {
   }
 
   // Check if username exists
-  const existing = await pool.query("SELECT username FROM users WHERE username = $1", [cleanUsername]);
+  const existing = await pool.query(
+    "SELECT username FROM users WHERE username = $1",
+    [cleanUsername],
+  );
   if (existing.rows.length > 0) {
     throw new Error("USERNAME_TAKEN");
   }
@@ -25,7 +28,7 @@ export const registerUser = async (username: string, password: string) => {
   await pool.query(
     `INSERT INTO users (username, slug, password_hash)
      VALUES ($1, $2, $3)`,
-    [cleanUsername, slug, passwordHash]
+    [cleanUsername, slug, passwordHash],
   );
 
   const sessionId = crypto.randomUUID();
@@ -33,7 +36,7 @@ export const registerUser = async (username: string, password: string) => {
   await pool.query(
     `INSERT INTO user_sessions (session_id, username, slug, expires_at)
      VALUES ($1, $2, $3, NOW() + INTERVAL '30 days')`,
-    [sessionId, cleanUsername, slug]
+    [sessionId, cleanUsername, slug],
   );
 
   return { success: true, slug, sessionId };
@@ -44,7 +47,7 @@ export const loginUser = async (username: string, password: string) => {
 
   const result = await pool.query(
     "SELECT username, password_hash, slug FROM users WHERE username = $1",
-    [cleanUsername]
+    [cleanUsername],
   );
 
   if (result.rows.length === 0) {
@@ -56,12 +59,17 @@ export const loginUser = async (username: string, password: string) => {
   const isValid = await bcrypt.compare(password, user.password_hash);
 
   if (!isValid) {
-    throw new Error("INVALID_PASSWORD");
+    throw new Error("INVALID_CREDENTIALS");
   }
 
+  await pool.query("UPDATE users SET last_active = NOW() WHERE username = $1", [
+    cleanUsername,
+  ]);
+
+  // cleanup old sessions
   await pool.query(
-    "UPDATE users SET last_active = NOW() WHERE username = $1",
-    [cleanUsername]
+    "DELETE FROM user_sessions WHERE username = $1 AND expires_at < NOW()",
+    [cleanUsername],
   );
 
   const sessionId = crypto.randomUUID();
@@ -69,12 +77,14 @@ export const loginUser = async (username: string, password: string) => {
   await pool.query(
     `INSERT INTO user_sessions (session_id, username, slug, expires_at)
      VALUES ($1, $2, $3, NOW() + INTERVAL '30 days')`,
-    [sessionId, cleanUsername, user.slug]
+    [sessionId, cleanUsername, user.slug],
   );
 
   return { success: true, slug: user.slug, sessionId };
 };
 
 export const logoutUser = async (sessionId: string) => {
-  await pool.query("DELETE FROM user_sessions WHERE session_id = $1", [sessionId]);
+  await pool.query("DELETE FROM user_sessions WHERE session_id = $1", [
+    sessionId,
+  ]);
 };

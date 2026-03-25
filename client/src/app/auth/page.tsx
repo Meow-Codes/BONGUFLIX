@@ -80,7 +80,7 @@ export default function AuthPage() {
       const res = await fetch(`${API_URL}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",           // Important for cookies
+        // No credentials: "include" needed — we're not using cookies
         body: JSON.stringify({
           username: username.trim(),
           password: password.trim(),
@@ -100,10 +100,13 @@ export default function AuthPage() {
         return;
       }
 
-      // SUCCESS
+      // Store sessionId in localStorage instead of relying on cookie
+      if (data.sessionId) {
+        localStorage.setItem("sessionId", data.sessionId);
+      }
+
       toast.success(isLogin ? "Welcome back!" : "Account created!");
 
-      // Redirect using slug returned by backend
       setTimeout(() => {
         if (data.slug) {
           router.push(`/dashboard/${data.slug}`);
@@ -111,7 +114,6 @@ export default function AuthPage() {
           toast.error("Redirect failed - missing slug");
         }
       }, 900);
-
     } catch (err) {
       console.error(err);
       toast.error("Cannot connect to server. Is backend running?");

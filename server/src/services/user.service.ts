@@ -14,7 +14,7 @@ export const getUserBySlug = async (slug: string) => {
   return {
     username: rows[0].username,
     slug,
-    sessionId: rows[0].session_id,
+    // sessionId: rows[0].session_id,
     lastActive: rows[0].last_active,
     preferences: rows[0].preferences,
     randomSeed: seed,

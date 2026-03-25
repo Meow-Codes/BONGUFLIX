@@ -597,10 +597,12 @@ export default function DashboardPage() {
   const getCookie = (name: string): string | null => {
     if (typeof document === "undefined") return null;
 
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) {
-      return parts.pop()?.split(";").shift() || null;
+    const cookies = document.cookie.split(";");
+    for (let cookie of cookies) {
+      const [key, value] = cookie.trim().split("=");
+      if (key === name) {
+        return value;
+      }
     }
     return null;
   };
@@ -609,21 +611,26 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const init = async () => {
-      const sessionId = getCookie("sessionId");
+      // Read from localStorage instead of httpOnly cookie
+      const sessionId = localStorage.getItem("sessionId");
 
       if (!sessionId) {
         setError("No session found. Please log in again.");
         setLoading(false);
+        setTimeout(() => router.push("/auth"), 1800);
         return;
       }
 
       try {
         const userRes = await fetch(`${API}/api/user/${slug}`, {
           headers: { "X-Session-Id": sessionId },
-          credentials: "include",
+          // No credentials: "include" needed
         });
 
-        if (!userRes.ok) throw new Error("Session invalid or expired");
+        if (!userRes.ok) {
+          localStorage.removeItem("sessionId"); // Clear bad session
+          throw new Error("Session invalid or expired");
+        }
 
         const userData: UserData = await userRes.json();
         setUser(userData);
@@ -728,8 +735,7 @@ export default function DashboardPage() {
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Unknown error";
         setError(msg);
-        document.cookie =
-          "sessionId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        localStorage.removeItem("sessionId");
         setTimeout(() => router.push("/auth"), 1800);
       } finally {
         setLoading(false);

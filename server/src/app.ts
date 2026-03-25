@@ -3,6 +3,7 @@ dotenv.config(); // Must be first — loads env before any other import reads it
 
 import express, { Request, Response } from "express";
 import cors from "cors";
+import rateLimit from "express-rate-limit";
 
 import { initDB } from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
@@ -14,6 +15,12 @@ const app = express();
 const PORT = Number(process.env.PORT) || 6942;
 
 const allowedOrigin = [process.env.FRONTEND_URL, process.env.BACKEND_URL, "http://localhost:3000"].filter(Boolean) as string[]; // Filter out undefined
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
+  message: { error: "Too many attempts, please try again later" },
+});
 
 app.use(
   cors({
@@ -31,7 +38,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Routes
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/recommend", recommendRoutes);
 
