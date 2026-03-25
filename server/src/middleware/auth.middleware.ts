@@ -6,16 +6,25 @@ export const requireAuth = async (
   res: Response,
   next: NextFunction
 ): Promise<void> => {
-  const rawSessionId = req.headers["x-session-id"] ?? req.query.sessionId;
-
-  // Normalize: header can be string | string[], query can be string | ParsedQs
-  const sessionId =
-    typeof rawSessionId === "string" ? rawSessionId : undefined;
+  let sessionId = 
+    (req.headers["x-session-id"] as string) ||
+    (req.query.sessionId as string) ||
+    (req.cookies?.sessionId as string);   // ← Added this line
 
   if (!sessionId) {
     res.status(401).json({ error: "No session provided" });
     return;
   }
+  // const rawSessionId = req.headers["x-session-id"] ?? req.query.sessionId;
+
+  // // Normalize: header can be string | string[], query can be string | ParsedQs
+  // const sessionId =
+  //   typeof rawSessionId === "string" ? rawSessionId : undefined;
+
+  // if (!sessionId) {
+  //   res.status(401).json({ error: "No session provided" });
+  //   return;
+  // }
 
   try {
     const result = await pool.query(

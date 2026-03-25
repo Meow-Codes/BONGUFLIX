@@ -13,7 +13,7 @@ import cookieParser from "cookie-parser";
 const app = express();
 const PORT = Number(process.env.PORT) || 6942;
 
-const allowedOrigin = [process.env.FRONTEND_URL, "http://localhost:3000"].filter(Boolean) as string[]; // Filter out undefined
+const allowedOrigin = [process.env.FRONTEND_URL, process.env.BACKEND_URL, "http://localhost:3000"].filter(Boolean) as string[]; // Filter out undefined
 
 app.use(
   cors({

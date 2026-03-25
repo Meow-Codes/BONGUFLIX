@@ -13,10 +13,8 @@ import {
   Loader2,
   User,
   Lock,
-  Sparkles,
   Shield,
 } from "lucide-react";
-import { set } from "react-hook-form";
 
 const Particle = ({ style }: { style: React.CSSProperties }) => (
   <div className="absolute rounded-full pointer-events-none" style={style} />
@@ -82,7 +80,7 @@ export default function AuthPage() {
       const res = await fetch(`${API_URL}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        credentials: "include",           // Important for cookies
         body: JSON.stringify({
           username: username.trim(),
           password: password.trim(),
@@ -102,9 +100,20 @@ export default function AuthPage() {
         return;
       }
 
+      // SUCCESS
       toast.success(isLogin ? "Welcome back!" : "Account created!");
-      setTimeout(() => router.push(`/dashboard/${data.slug}`), 800);
-    } catch {
+
+      // Redirect using slug returned by backend
+      setTimeout(() => {
+        if (data.slug) {
+          router.push(`/dashboard/${data.slug}`);
+        } else {
+          toast.error("Redirect failed - missing slug");
+        }
+      }, 900);
+
+    } catch (err) {
+      console.error(err);
       toast.error("Cannot connect to server. Is backend running?");
     } finally {
       setIsLoading(false);
@@ -118,7 +127,6 @@ export default function AuthPage() {
     setPassword(randomPass);
     setShowPassword(true);
   };
-
 
   return (
     <>
@@ -318,7 +326,7 @@ export default function AuthPage() {
           </div>
         </nav>
 
-        {/* Auth Card */}
+        {/* Auth Card - YOUR FULL BEAUTIFUL UI KEPT INTACT */}
         <div className="relative z-10 flex items-center justify-center min-h-screen px-4 py-28">
           <div
             ref={cardRef}
@@ -350,7 +358,6 @@ export default function AuthPage() {
             <div className="relative z-10 p-8 md:p-10">
               {/* Tab switcher */}
               <div className="relative flex border-b border-white/10 mb-8">
-                {/* Sliding indicator */}
                 <div
                   className="tab-indicator"
                   style={{
@@ -496,7 +503,7 @@ export default function AuthPage() {
                   <div className="field-border" />
                 </div>
 
-                {/* Submit */}
+                {/* Submit Button */}
                 <div className="pt-2">
                   <button
                     type="submit"
@@ -545,17 +552,15 @@ export default function AuthPage() {
                 {isLogin ? "Create a free account" : "Sign in to your account"}
               </button>
 
-              {/* Trust indicators */}
+              {/* Random Fill */}
               {!isLogin && (
                 <div className="mt-6 flex items-center justify-center gap-4 text-white/20 text-xs">
                   <button
                     onClick={handleRandomFill}
                     className="flex items-center gap-1.5 transition-colors duration-200 hover:text-white/40 cursor-pointer"
                   >
-                    <span className="flex items-center gap-1.5">
-                      <Shield size={11} />
-                      Auto Fill Username and Password?
-                    </span>
+                    <Shield size={11} />
+                    Auto Fill Username and Password?
                   </button>
                 </div>
               )}
