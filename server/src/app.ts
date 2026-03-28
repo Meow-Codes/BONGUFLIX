@@ -1,71 +1,109 @@
 import dotenv from "dotenv";
-dotenv.config(); // Must be first — loads env before any other import reads it
+dotenv.config();
 
-import express, { Request, Response } from "express";
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
+import compression from "compression";
+import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 
 import { initDB } from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
-import recommendRoutes from "./routes/recommend.routes.js";
-import cookieParser from "cookie-parser";
+import mediaRoutes from "./routes/media.routes.js";
+import { cache } from "./utils/cache.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 6942;
 
-const allowedOrigin = [process.env.FRONTEND_URL, process.env.BACKEND_URL, "http://localhost:3000"].filter(Boolean) as string[]; // Filter out undefined
+// ─── Security headers ─────────────────────────────────────────────────────────
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // allow TMDB image proxying
+}));
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20,
-  message: { error: "Too many attempts, please try again later" },
-});
+// ─── Compression ─────────────────────────────────────────────────────────────
+app.use(compression());
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigin.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-  })
-);
-app.use(express.json());
+// ─── CORS ─────────────────────────────────────────────────────────────────────
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.BACKEND_URL,
+  "http://localhost:3000",
+  "http://localhost:3001",
+].filter(Boolean) as string[];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) callback(null, true);
+    else callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+}));
+
+// ─── Body parsing ─────────────────────────────────────────────────────────────
+app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
-// Routes
+// ─── Rate limiting ────────────────────────────────────────────────────────────
+
+// Strict: auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many attempts, try again in 15 minutes" },
+});
+
+// Generous: media endpoints (they're cached anyway)
+const mediaLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Rate limit exceeded" },
+});
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/user", userRoutes);
-app.use("/api/recommend", recommendRoutes);
+app.use("/api", mediaLimiter, mediaRoutes);
 
-// Base
+// ─── Health / diagnostics ─────────────────────────────────────────────────────
 app.get("/", (_req: Request, res: Response) => {
-  res.send("We got the api + render db. Now we can just cook");
+  res.json({ service: "BONGUFLIX API", status: "running" });
 });
 
-// Health checks
 app.get("/healthz", (_req: Request, res: Response) => {
-  res.send("API is healthy and ready to serve requests!");
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// Readiness probe — useful for container orchestration (K8s, Render, etc.)
 app.get("/readyz", (_req: Request, res: Response) => {
-  res.send("API is ready to race!!!!!!!");
+  res.json({ status: "ready" });
 });
 
-// Initialize DB tables on startup then listen
+// Expose cache stats in dev
+if (process.env.NODE_ENV !== "production") {
+  app.get("/debug/cache", (_req, res) => {
+    res.json(cache.stats());
+  });
+}
+
+// ─── Global error handler ─────────────────────────────────────────────────────
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error("[unhandled]", err.message);
+  res.status(500).json({ error: "Internal server error" });
+});
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
 initDB()
   .then(() => {
-    console.log("DB tables initialized");
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+      console.log(`🚀 BONGUFLIX API running on http://localhost:${PORT}`);
     });
   })
   .catch((err) => {
-    console.error("DB init failed — server will not start:", err);
+    console.error("DB init failed:", err);
     process.exit(1);
   });

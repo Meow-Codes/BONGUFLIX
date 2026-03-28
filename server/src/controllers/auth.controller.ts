@@ -28,7 +28,7 @@ export const login = async (req: Request, res: Response) => {
     res.json(data);
   } catch (err: any) {
     if (err.message === "USER_NOT_FOUND")
-      return res.status(404).json({ error: "USERNAME_TAKEN" }); // keep same error surface
+      return res.status(404).json({ error: "USERNAME_TAKEN" });
     if (err.message === "INVALID_CREDENTIALS")
       return res.status(401).json({ error: "INVALID_CREDENTIALS" });
     res.status(400).json({ error: err.message });

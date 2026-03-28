@@ -8,7 +8,6 @@ export const requireAuth = async (
 ): Promise<void> => {
   const rawSessionId = req.headers["x-session-id"] ?? req.query.sessionId;
 
-  // Normalize: header can be string | string[], query can be string | ParsedQs
   const sessionId =
     typeof rawSessionId === "string" ? rawSessionId : undefined;
 
