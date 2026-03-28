@@ -108,7 +108,7 @@ export interface Person {
 export interface HomeRow {
   id: string;
   title: string;
-  type: "movie" | "tv";
+  type: "movie" | "tv" | "mixed";
   items: MediaItem[];
 }
 
@@ -159,4 +159,32 @@ export interface GenreStats {
   genre: string;
   movie_count: number;
   tv_count: number;
+}
+
+export interface MediaItem extends MediaBase {
+  genres?: string[];
+  // TV fields — present when media_type === "tv"
+  name?: string;               // TV shows use name, not title
+  first_air_date?: string;
+  last_air_date?: string;
+  number_of_seasons?: number;
+  number_of_episodes?: number;
+  in_production?: boolean;
+  status?: string;
+  original_language?: string;
+  creator?: string | null;
+  // Movie fields — present when media_type === "movie"
+  director?: string | null;
+  cast?: Array<{
+    person_id: number;
+    name: string;
+    character_name?: string | null;
+    profile_path?: string | null;
+    order_number?: number | null;
+  }>;
+  imdb_id?: string;
+  rotten_tomatoes?: number;
+  metacritic?: number;
+  budget?: number;
+  revenue?: number;
 }
