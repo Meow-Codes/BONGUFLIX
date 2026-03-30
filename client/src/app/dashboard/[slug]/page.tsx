@@ -168,12 +168,14 @@ export default function DashboardPage() {
           />
         )}
 
+        <div className="mt-20"></div>
+
         {/* Rows */}
         <div
           style={{
             position: "relative",
             zIndex: 2,
-            marginTop: homeData.hero ? "-14vw" : "80px",
+            marginTop: homeData.hero ? "-14vw" : "120px",
             paddingBottom: 80,
             animation: "rowsEnter 0.8s cubic-bezier(0.16,1,0.3,1) 0.3s both",
           }}
