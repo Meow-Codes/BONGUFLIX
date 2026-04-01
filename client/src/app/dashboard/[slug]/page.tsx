@@ -159,7 +159,7 @@
             style={{
               position: "relative",
               zIndex: 2,
-              marginTop: homeData.hero ? "-14vw" : "120px",
+              marginTop: homeData.hero ? "40px" : "120px",
               paddingBottom: 80,
               animation: "rowsEnter 0.8s cubic-bezier(0.16,1,0.3,1) 0.3s both",
             }}

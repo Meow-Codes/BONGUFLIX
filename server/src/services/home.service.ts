@@ -23,27 +23,33 @@ const TV_COLS = `
 const fetchGenreRow = async (
   genreName: string,
   mediaType: "movie" | "tv",
-  limit = 20,
+  limit = 40,
 ): Promise<MediaItem[]> => {
   if (mediaType === "movie") {
+    // Ensure clean imagery in results
     const { rows } = await pool.query(
       `SELECT ${MOVIE_COLS}
        FROM movies m
        JOIN movie_genres mg ON mg.movie_id = m.id
        JOIN genres g ON g.id = mg.genre_id
-       WHERE LOWER(g.name) = LOWER($1) AND m.poster_path IS NOT NULL
+       WHERE LOWER(g.name) = LOWER($1) AND m.poster_path IS NOT NULL AND m.backdrop_path IS NOT NULL
        ORDER BY m.popularity DESC NULLS LAST
        LIMIT $2`,
       [genreName, limit],
     );
     return rows;
   } else {
+    // Filter out 18+ content for Animation explicitly via DB certification checks
+    const adultFilter = genreName.toLowerCase() === "animation" 
+      ? `AND (t.age_certification IS NULL OR t.age_certification NOT IN ('TV-MA', '18', 'R', 'NC-17'))` 
+      : "";
+
     const { rows } = await pool.query(
       `SELECT ${TV_COLS}
        FROM tv_shows t
        JOIN tv_genres tg ON tg.tv_show_id = t.id
        JOIN genres g ON g.id = tg.genre_id
-       WHERE LOWER(g.name) = LOWER($1) AND t.poster_path IS NOT NULL
+       WHERE LOWER(g.name) = LOWER($1) AND t.poster_path IS NOT NULL AND t.backdrop_path IS NOT NULL ${adultFilter}
        ORDER BY t.popularity DESC NULLS LAST
        LIMIT $2`,
       [genreName, limit],
@@ -52,12 +58,24 @@ const fetchGenreRow = async (
   }
 };
 
+const shuffleArray = <T>(array: T[]): T[] => {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = arr[i] as T;
+    arr[i] = arr[j] as T;
+    arr[j] = temp;
+  }
+  return arr;
+};
+
 // ─── Build all rows in parallel ───────────────────────────────────────────────
 
 export const getHomeData = async (): Promise<HomeResponse> => {
-  const cacheKey = "home:v1";
-  const cached = await cache.get<HomeResponse>(cacheKey);
-  if (cached) return cached;
+  const cacheKey = "home:v2";
+  let baseData = await cache.get<{ heroPool: MediaItem[], rows: HomeRow[] }>(cacheKey);
+
+  if (!baseData) {
 
   // Run all queries in parallel — this is the key to zero latency
   const [
@@ -84,31 +102,31 @@ export const getHomeData = async (): Promise<HomeResponse> => {
     pool.query(
       `SELECT ${MOVIE_COLS} FROM movies m
        WHERE m.popularity IS NOT NULL AND m.backdrop_path IS NOT NULL AND m.vote_count > 50
-       ORDER BY m.popularity DESC NULLS LAST LIMIT 25`,
+       ORDER BY m.popularity DESC NULLS LAST LIMIT 50`,
     ),
     // Trending TV
     pool.query(
       `SELECT ${TV_COLS} FROM tv_shows t
        WHERE t.popularity IS NOT NULL AND t.backdrop_path IS NOT NULL
-       ORDER BY t.popularity DESC NULLS LAST LIMIT 25`,
+       ORDER BY t.popularity DESC NULLS LAST LIMIT 50`,
     ),
     // Top Rated Movies
     pool.query(
       `SELECT ${MOVIE_COLS} FROM movies m
        WHERE m.vote_average >= 7.5 AND m.vote_count > 200 AND m.poster_path IS NOT NULL
-       ORDER BY m.vote_average DESC, m.vote_count DESC LIMIT 25`,
+       ORDER BY m.vote_average DESC, m.vote_count DESC LIMIT 40`,
     ),
     // Top Rated TV
     pool.query(
       `SELECT ${TV_COLS} FROM tv_shows t
        WHERE t.vote_average >= 7.5 AND t.poster_path IS NOT NULL
-       ORDER BY t.vote_average DESC, t.popularity DESC LIMIT 25`,
+       ORDER BY t.vote_average DESC, t.popularity DESC LIMIT 40`,
     ),
     // New on BONGUFLIX (last 2 years)
     pool.query(
       `SELECT ${MOVIE_COLS} FROM movies m
-       WHERE m.year_released >= EXTRACT(YEAR FROM NOW()) - 2 AND m.poster_path IS NOT NULL
-       ORDER BY m.release_date DESC NULLS LAST LIMIT 25`,
+       WHERE m.year_released >= EXTRACT(YEAR FROM NOW()) - 2 AND m.poster_path IS NOT NULL AND m.backdrop_path IS NOT NULL
+       ORDER BY m.release_date DESC NULLS LAST LIMIT 40`,
     ),
     // Genre rows
     fetchGenreRow("Action", "movie"),
@@ -169,18 +187,15 @@ export const getHomeData = async (): Promise<HomeResponse> => {
     }));
 
   // ── Pick hero (best backdrop from trending) ────────────────────────────────
-  const heroPool = [...trendingMovies.rows, ...trendingTV.rows]
+  const heroPoolRaw = [...trendingMovies.rows, ...trendingTV.rows]
     .filter((i) => i.backdrop_path && i.overview)
-    .sort((a, b) => (b.vote_average ?? 0) - (a.vote_average ?? 0));
-  const hero = heroPool[0]
-    ? {
-        ...heroPool[0],
-        genres:
-          (heroPool[0].media_type === "movie" ? movieGenreMap : tvGenreMap).get(
-            heroPool[0].id,
-          ) ?? [],
-      }
-    : null;
+    .sort((a, b) => (b.vote_average ?? 0) - (a.vote_average ?? 0))
+    .slice(0, 15);
+  
+  const heroPool = heroPoolRaw.map(h => ({
+    ...h,
+    genres: (h.media_type === "movie" ? movieGenreMap : tvGenreMap).get(h.id) ?? []
+  }));
 
   // ── Build rows ─────────────────────────────────────────────────────────────
   const rows = [
@@ -294,7 +309,19 @@ export const getHomeData = async (): Promise<HomeResponse> => {
     },
   ].filter((r) => r.items.length >= 4) as HomeRow[];
 
-  const result: HomeResponse = { hero, rows };
-  await cache.set(cacheKey, result, TTL.HOME);
-  return result;
+    baseData = { heroPool, rows };
+    await cache.set(cacheKey, baseData, TTL.HOME);
+  }
+
+  // ── Final dynamic shuffle for the current user instance ───────────────────
+  const randomHero = baseData.heroPool.length > 0 
+    ? (baseData.heroPool[Math.floor(Math.random() * baseData.heroPool.length)] ?? null)
+    : null;
+
+  const shuffledRows = baseData.rows.map(r => ({
+    ...r,
+    items: shuffleArray(r.items).slice(0, 20) // Shuffle beautifully and cap cleanly
+  }));
+
+  return { hero: randomHero, rows: shuffledRows };
 };

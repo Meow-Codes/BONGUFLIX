@@ -117,6 +117,9 @@ export const DetailModal = ({ item, onClose }: DetailModalProps) => {
 
         .modal-card {
           width: min(900px, 96vw);
+          max-height: 90vh;
+          display: flex;
+          flex-direction: column;
           background: #181818;
           border-radius: 14px;
           overflow: hidden;
@@ -185,7 +188,11 @@ export const DetailModal = ({ item, onClose }: DetailModalProps) => {
         }
         .modal-btn-icon:hover { border-color: #fff !important; }
 
-        .modal-body { padding: 0 24px 28px; }
+        .modal-body { 
+          padding: 0 24px 28px; 
+          overflow-y: auto;
+          flex: 1;
+        }
 
         /* Meta bar */
         .modal-meta {
