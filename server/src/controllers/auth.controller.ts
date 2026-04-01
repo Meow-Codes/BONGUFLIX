@@ -11,7 +11,7 @@ export const register = async (req: Request, res: Response) => {
     res.cookie("sessionId", data.sessionId, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax", // 'lax' is safer for top-level navigation, 'strict' can be too aggressive if redirecting from other domains
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     });
     res.json(data);
@@ -32,7 +32,7 @@ export const login = async (req: Request, res: Response) => {
     res.cookie("sessionId", data.sessionId, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     });
     res.json(data);

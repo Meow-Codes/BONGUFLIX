@@ -31,6 +31,10 @@ redisClient.on("ready", () => {
 
 // Connect automatically
 (async () => {
+  if (process.env.NODE_ENV === "production" && !process.env.REDIS_URL) {
+    console.log("No REDIS_URL provided in production. Redis caching is disabled.");
+    return;
+  }
   try {
     await redisClient.connect();
     console.log("Redis connected successfully");
