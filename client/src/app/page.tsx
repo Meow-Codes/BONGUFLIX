@@ -2,14 +2,41 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import "@fontsource/bebas-neue";
+import toast from "react-hot-toast";
+import { fetchSession, logoutAllSessionsApi, type SessionUser } from "@/utils/api";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const Particle = ({ style }: { style: React.CSSProperties }) => (
   <div className="absolute rounded-full pointer-events-none" style={style} />
 );
 
 export default function Home() {
+  const router = useRouter();
   const [particles, setParticles] = useState<{ id: number; style: React.CSSProperties }[]>([]);
+  const [session, setSession] = useState<SessionUser | null | undefined>(undefined);
+  const [sessionDialogOpen, setSessionDialogOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const s = await fetchSession();
+      if (cancelled) return;
+      setSession(s);
+      if (s?.slug) setSessionDialogOpen(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const generated = Array.from({ length: 12 }, (_, i) => {
@@ -95,6 +122,12 @@ export default function Home() {
               BONGUFLIX
             </h1>
           </Link>
+          <Link
+            href="/about-us?returnTo=/"
+            className="text-sm font-semibold text-white/80 hover:text-white transition-colors"
+          >
+            About Us
+          </Link>
         </nav>
 
         {/* Hero content */}
@@ -125,6 +158,54 @@ export default function Home() {
         {/* Bottom fade */}
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black to-transparent pointer-events-none z-10" />
       </div>
+
+      <Dialog open={sessionDialogOpen} onOpenChange={setSessionDialogOpen}>
+        <DialogContent className="z-[20050] border-white/10 bg-[#141414] text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white">You&apos;re still signed in</DialogTitle>
+            <DialogDescription className="text-white/65">
+              {session?.username
+                ? `Active session for ${session.username}. Go to your dashboard, stay on this page, or sign out on every device.`
+                : "We found an active session for this browser."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              className="rounded-md border border-white/20 bg-transparent px-4 py-2 text-sm font-medium text-white hover:bg-white/10 cursor-pointer"
+              onClick={() => setSessionDialogOpen(false)}
+            >
+              Stay here
+            </button>
+            <button
+              type="button"
+              className="rounded-md bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20 cursor-pointer"
+              onClick={() => {
+                if (session?.slug) router.push(`/dashboard/${session.slug}`);
+                setSessionDialogOpen(false);
+              }}
+            >
+              Go to dashboard
+            </button>
+            <button
+              type="button"
+              className="rounded-md bg-[#E50914] px-4 py-2 text-sm font-semibold text-white hover:bg-[#c50812] cursor-pointer"
+              onClick={async () => {
+                try {
+                  await logoutAllSessionsApi();
+                  setSession(null);
+                  setSessionDialogOpen(false);
+                  toast.success("Signed out on all devices");
+                } catch {
+                  toast.error("Could not sign out everywhere");
+                }
+              }}
+            >
+              Sign out everywhere
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -8,18 +8,18 @@ import {
 import { imgUrl, getTitle, getYear, getRating, getRuntime } from "@/utils/media";
 import type { MediaItem, Season, Episode } from "@/types/media.types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:6942";
-
 interface DetailModalProps {
   item: MediaItem;
   onClose: () => void;
+  /** Open another title from Similar (keeps modal open, loads new detail) */
+  onNavigate?: (item: MediaItem) => void;
 }
 
 type Tab = "overview" | "episodes" | "similar";
 
 import { fetchMovieDetail, fetchTVDetail, fetchSimilar, fetchSeasons, fetchEpisodes } from "@/utils/api";
 
-export const DetailModal = ({ item, onClose }: DetailModalProps) => {
+export const DetailModal = ({ item, onClose, onNavigate }: DetailModalProps) => {
   const [full, setFull] = useState<MediaItem | null>(null);
   const [similar, setSimilar] = useState<MediaItem[]>([]);
   const [seasons, setSeasons] = useState<Season[]>([]);
@@ -31,6 +31,7 @@ export const DetailModal = ({ item, onClose }: DetailModalProps) => {
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
+    document.body.classList.add("detail-modal-open");
 
     const load = async () => {
       try {
@@ -69,7 +70,10 @@ export const DetailModal = ({ item, onClose }: DetailModalProps) => {
     };
 
     load();
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+      document.body.classList.remove("detail-modal-open");
+    };
   }, [item]);
 
   const loadEpisodes = async (seasonNum: number) => {
@@ -104,20 +108,34 @@ export const DetailModal = ({ item, onClose }: DetailModalProps) => {
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&display=swap');
 
         .modal-backdrop {
-          position: fixed; inset: 0; z-index: 500;
+          position: fixed; inset: 0; z-index: 10000;
           background: rgba(0,0,0,0.78);
           backdrop-filter: blur(10px);
           display: flex; align-items: flex-start; justify-content: center;
           padding: 40px 16px 60px;
           overflow-y: auto;
+          overflow-x: hidden;
           animation: modalBgIn 0.22s ease;
           font-family: 'Outfit', sans-serif;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(229,9,20,0.65) rgba(255,255,255,0.06);
+        }
+        .modal-backdrop::-webkit-scrollbar { width: 10px; }
+        .modal-backdrop::-webkit-scrollbar-track {
+          background: rgba(0,0,0,0.25);
+          border-radius: 8px;
+        }
+        .modal-backdrop::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, #E50914, #9b0610);
+          border-radius: 8px;
+          border: 2px solid rgba(0,0,0,0.35);
         }
         @keyframes modalBgIn { from{opacity:0} to{opacity:1} }
 
         .modal-card {
           width: min(900px, 96vw);
-          max-height: 90vh;
+          max-height: min(90vh, 100dvh);
+          min-height: 0;
           display: flex;
           flex-direction: column;
           background: #181818;
@@ -191,7 +209,20 @@ export const DetailModal = ({ item, onClose }: DetailModalProps) => {
         .modal-body { 
           padding: 0 24px 28px; 
           overflow-y: auto;
+          overflow-x: hidden;
           flex: 1;
+          min-height: 0;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(229,9,20,0.65) rgba(255,255,255,0.06);
+        }
+        .modal-body::-webkit-scrollbar { width: 8px; }
+        .modal-body::-webkit-scrollbar-track {
+          background: rgba(255,255,255,0.04);
+          border-radius: 8px;
+        }
+        .modal-body::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, #E50914, #9b0610);
+          border-radius: 8px;
         }
 
         /* Meta bar */
@@ -337,7 +368,12 @@ export const DetailModal = ({ item, onClose }: DetailModalProps) => {
         .similar-item-meta { font-size: 10px; color: rgba(255,255,255,0.45); }
       `}</style>
 
-      <div className="modal-backdrop" onClick={onClose}>
+      <div
+        className="modal-backdrop"
+        role="presentation"
+        onClick={onClose}
+        onWheel={(e) => e.stopPropagation()}
+      >
         <div className="modal-card" onClick={(e) => e.stopPropagation()}>
           <button className="modal-close" onClick={onClose}><X size={15} /></button>
 
@@ -529,7 +565,14 @@ export const DetailModal = ({ item, onClose }: DetailModalProps) => {
                     ) : similar.slice(0, 12).map((s) => {
                       const p = imgUrl(s.poster_path, "w342");
                       return (
-                        <div key={`${s.media_type}-${s.id}`} className="similar-item">
+                        <div
+                          key={`${s.media_type}-${s.id}`}
+                          className="similar-item"
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => onNavigate?.(s)}
+                          onKeyDown={(e) => e.key === "Enter" && onNavigate?.(s)}
+                        >
                           {p
                             ? <img src={p} alt={getTitle(s)} />
                             : <div style={{ width: "100%", height: "100%", background: "#1e1e1e", display: "flex", alignItems: "center", justifyContent: "center" }}>

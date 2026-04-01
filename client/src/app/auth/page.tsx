@@ -105,10 +105,14 @@ export default function AuthPage() {
       toast.success(isLogin ? "Welcome back!" : "Account created!");
 
       setTimeout(() => {
-        if (data.slug) {
-          router.push(`/dashboard/${data.slug}`);
-        } else {
+        if (!data.slug) {
           toast.error("Redirect failed - missing slug");
+          return;
+        }
+        if (data.isNewUser === true || data.onboardingComplete === false) {
+          router.push(`/onboarding/${data.slug}`);
+        } else {
+          router.push(`/dashboard/${data.slug}`);
         }
       }, 900);
     } catch (err) {

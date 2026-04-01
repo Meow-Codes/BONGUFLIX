@@ -108,7 +108,7 @@ export const MediaRow = ({
         .row-strip-wrap:hover .row-arrow { opacity: 1; }
       `}</style>
 
-      <div className="row-root">
+      <div className="row-root" id={`row-${row.id}`}>
         <div className="row-header">
           <h2 className={`row-title ${active ? "active" : ""}`}>{row.title}</h2>
           <span className="row-explore">Explore All →</span>

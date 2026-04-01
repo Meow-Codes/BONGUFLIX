@@ -1,6 +1,7 @@
 import { pool } from "../config/db.js";
 import { cache, TTL } from "../utils/cache.js";
 import { attachGenres } from "../utils/mediaHelpers.js";
+import { personalizeHomeRows, type PrefsShape } from "../utils/homePersonalize.js";
 import type { HomeResponse, HomeRow, MediaItem } from "../types/media.types.js";
 
 const MOVIE_COLS = `
@@ -71,8 +72,8 @@ const shuffleArray = <T>(array: T[]): T[] => {
 
 // ─── Build all rows in parallel ───────────────────────────────────────────────
 
-export const getHomeData = async (): Promise<HomeResponse> => {
-  const cacheKey = "home:v2";
+export const getHomeData = async (userPreferences?: unknown): Promise<HomeResponse> => {
+  const cacheKey = "home:v3";
   let baseData = await cache.get<{ heroPool: MediaItem[], rows: HomeRow[] }>(cacheKey);
 
   if (!baseData) {
@@ -82,7 +83,7 @@ export const getHomeData = async (): Promise<HomeResponse> => {
     trendingMovies,
     trendingTV,
     topRatedMovies,
-    topRatedTV,
+    popularAnimeTV,
     newMovies,
     actionMovies,
     dramaMovies,
@@ -116,11 +117,17 @@ export const getHomeData = async (): Promise<HomeResponse> => {
        WHERE m.vote_average >= 7.5 AND m.vote_count > 200 AND m.poster_path IS NOT NULL
        ORDER BY m.vote_average DESC, m.vote_count DESC LIMIT 40`,
     ),
-    // Top Rated TV
+    // Popular Anime (animation genre, non–18+ certifications)
     pool.query(
-      `SELECT ${TV_COLS} FROM tv_shows t
-       WHERE t.vote_average >= 7.5 AND t.poster_path IS NOT NULL
-       ORDER BY t.vote_average DESC, t.popularity DESC LIMIT 40`,
+      `SELECT ${TV_COLS}
+       FROM tv_shows t
+       JOIN tv_genres tg ON tg.tv_show_id = t.id
+       JOIN genres g ON g.id = tg.genre_id
+       WHERE LOWER(g.name) = 'animation'
+         AND t.poster_path IS NOT NULL AND t.backdrop_path IS NOT NULL
+         AND (t.age_certification IS NULL OR t.age_certification NOT IN ('TV-MA', '18', 'R', 'NC-17'))
+       ORDER BY t.popularity DESC NULLS LAST
+       LIMIT 40`,
     ),
     // New on BONGUFLIX (last 2 years)
     pool.query(
@@ -161,7 +168,7 @@ export const getHomeData = async (): Promise<HomeResponse> => {
 
   const allTVItems = [
     ...trendingTV.rows,
-    ...topRatedTV.rows,
+    ...popularAnimeTV.rows,
     ...actionTV,
     ...dramaTV,
     ...comedyTV,
@@ -218,10 +225,10 @@ export const getHomeData = async (): Promise<HomeResponse> => {
       items: applyGenres(topRatedMovies.rows),
     },
     {
-      id: "top_rated_tv",
-      title: "Critically Acclaimed Shows",
+      id: "popular_anime",
+      title: "Popular Anime",
       type: "tv",
-      items: applyGenres(topRatedTV.rows),
+      items: applyGenres(popularAnimeTV.rows),
     },
     {
       id: "new_movies",
@@ -318,10 +325,15 @@ export const getHomeData = async (): Promise<HomeResponse> => {
     ? (baseData.heroPool[Math.floor(Math.random() * baseData.heroPool.length)] ?? null)
     : null;
 
-  const shuffledRows = baseData.rows.map(r => ({
+  const shuffledRows = baseData.rows.map((r) => ({
     ...r,
-    items: shuffleArray(r.items).slice(0, 20) // Shuffle beautifully and cap cleanly
+    items: shuffleArray(r.items).slice(0, 20), // Shuffle beautifully and cap cleanly
   }));
 
-  return { hero: randomHero, rows: shuffledRows };
+  const rows = personalizeHomeRows(
+    shuffledRows,
+    userPreferences as PrefsShape | null | undefined,
+  );
+
+  return { hero: randomHero, rows };
 };

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { pool } from "../config/db.js";
 import * as homeService from "../services/home.service.js";
 import * as searchService from "../services/search.service.js";
 import * as genreService from "../services/genre.service.js";
@@ -19,9 +20,18 @@ const getNumberQueryParam = (param: unknown, defaultValue: number): number => {
 };
 
 
-export const home = async (_req: Request, res: Response) => {
+export const home = async (req: Request, res: Response) => {
   try {
-    const data = await homeService.getHomeData();
+    const slug = (req as Request & { user?: { slug?: string } }).user?.slug;
+    let preferences: unknown = undefined;
+    if (slug) {
+      const { rows } = await pool.query<{ preferences: unknown }>(
+        "SELECT preferences FROM users WHERE slug = $1",
+        [slug],
+      );
+      preferences = rows[0]?.preferences ?? undefined;
+    }
+    const data = await homeService.getHomeData(preferences);
     res.json(data);
   } catch (err) {
     console.error(err);

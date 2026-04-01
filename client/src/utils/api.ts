@@ -50,8 +50,91 @@ export const getRuntime = (item: MediaItem): string => {
 
 // ─── Endpoints ────────────────────────────────────────────────────────────────
 
+export type UserResponse = {
+  username: string;
+  slug: string;
+  randomSeed: number;
+  preferences?: Record<string, unknown>;
+  profilePic?: string | null;
+  onboardingComplete?: boolean;
+  displayName?: string | null;
+};
+
+export type SessionUser = {
+  slug: string;
+  username: string;
+  preferences: Record<string, unknown> | null;
+  profile_pic: string | null;
+};
+
+export async function fetchSession(): Promise<SessionUser | null> {
+  try {
+    const res = await fetch(`${API}/api/auth/me`, { credentials: "include" });
+    if (!res.ok) return null;
+    return res.json() as Promise<SessionUser>;
+  } catch {
+    return null;
+  }
+}
+
 export const fetchUser = (slug: string) =>
-  apiFetch<{ username: string; slug: string; randomSeed: number }>(`/api/user/${slug}`);
+  apiFetch<UserResponse>(`/api/user/${slug}`);
+
+export type OnboardingSubmitBody = {
+  displayName: string;
+  profilePic: string | null;
+  selections: string[];
+  contentStyle: "movies" | "tv" | "mixed";
+};
+
+export const fetchOnboardingOptions = (slug: string) =>
+  apiFetch<{ genres: string[]; keywords: string[] }>(
+    `/api/user/${slug}/onboarding-options`,
+  );
+
+export const submitOnboarding = (slug: string, body: OnboardingSubmitBody) =>
+  apiFetch<{ success: boolean }>(`/api/user/${slug}/onboarding`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+export const flushPreferencesApi = (slug: string) =>
+  apiFetch<{ success: boolean }>(`/api/user/${slug}/preferences/flush`, {
+    method: "POST",
+  });
+
+export const patchUserPreferences = (
+  slug: string,
+  preferences: Record<string, unknown>,
+  profilePic?: string | null,
+) =>
+  apiFetch<{ success: boolean }>(`/api/user/${slug}/preferences`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ preferences, profilePic }),
+  });
+
+export const logoutApi = () =>
+  apiFetch<{ success: boolean }>("/api/auth/logout", { method: "POST" });
+
+/** Deletes all sessions for this account (every device). Clears cookie. */
+export const logoutAllSessionsApi = () =>
+  apiFetch<{ success: boolean }>("/api/auth/logout-all", { method: "POST" });
+
+export const uploadAvatar = async (slug: string, file: File) => {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await fetch(`${API}/api/user/${slug}/upload-avatar`, {
+    method: "POST",
+    credentials: "include",
+    body: fd,
+  });
+  const data = (await res.json().catch(() => ({}))) as { error?: string; url?: string };
+  if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
+  if (!data.url) throw new Error("No image URL returned");
+  return data.url;
+};
 
 export const fetchHome = () => apiFetch<HomeResponse>("/api/home");
 

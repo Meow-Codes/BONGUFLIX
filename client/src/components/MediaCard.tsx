@@ -1,6 +1,6 @@
 "use client";
 
-import { Play, Plus, ThumbsUp, Star } from "lucide-react";
+import { Play, Plus, ThumbsUp, Star, Info } from "lucide-react";
 import { imgUrl, getTitle, getRating, getYear } from "@/utils/media";
 import type { MediaItem } from "@/types/media.types";
 
@@ -89,8 +89,12 @@ export const MediaCard = ({ item, focused, onHover, onClick }: MediaCardProps) =
           flex-direction: column;
           justify-content: flex-end;
           gap: 5px;
+          pointer-events: none;
         }
+        .mcard-root:hover .mcard-overlay,
         .mcard-root.focused .mcard-overlay { opacity: 1; }
+        .mcard-overlay .mcard-actions,
+        .mcard-overlay .mcard-actions * { pointer-events: auto; }
 
         .mcard-actions {
           display: flex;
@@ -197,19 +201,36 @@ export const MediaCard = ({ item, focused, onHover, onClick }: MediaCardProps) =
               </button>
               <button
                 className="mcard-action-btn mcard-action-list"
-                onClick={(e) => e.stopPropagation()}
-                aria-label="Add to list"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick();
+                }}
+                aria-label="More info"
                 style={{ border: "1px solid rgba(255,255,255,0.35)" }}
               >
                 <Plus size={12} color="#fff" />
               </button>
               <button
                 className="mcard-action-btn mcard-action-like"
-                onClick={(e) => e.stopPropagation()}
-                aria-label="Like"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick();
+                }}
+                aria-label="More info"
                 style={{ border: "1px solid rgba(255,255,255,0.35)" }}
               >
                 <ThumbsUp size={10} color="#fff" />
+              </button>
+              <button
+                className="mcard-action-btn mcard-action-like"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick();
+                }}
+                aria-label="More info"
+                style={{ border: "1px solid rgba(255,255,255,0.35)" }}
+              >
+                <Info size={11} color="#fff" />
               </button>
             </div>
 

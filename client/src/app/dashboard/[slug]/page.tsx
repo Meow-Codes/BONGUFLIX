@@ -10,7 +10,7 @@
   import { SearchOverlay } from "@/components/SearchOverlay";
   import { LoadingScreen } from "@/components/LoadingScreen";
   import { useQuery } from "@tanstack/react-query";
-  import { fetchHome, fetchUser } from "@/utils/api";
+  import { fetchHome, fetchUser, type UserResponse } from "@/utils/api";
 
   import type { MediaItem, HomeResponse } from "@/types/media.types";
 
@@ -33,11 +33,17 @@
       refetchOnWindowFocus: false, // critical to avoid infinite loops on auth failure redirects
     });
 
+    /** When preferences change, this string changes → React Query refetches home (not stale cached rows). */
+    const preferencesSignature = user
+      ? JSON.stringify((user as UserResponse).preferences ?? null)
+      : "";
+
     const { data: homeData, isLoading: homeLoading, error: homeError } = useQuery({
-      queryKey: ["home"],
+      queryKey: ["home", slug, preferencesSignature],
       queryFn: fetchHome,
       retry: 1,
-      enabled: !!user, // only fetch home if user auth succeeded
+      enabled: !!user && user.onboardingComplete !== false,
+      staleTime: 0,
     });
 
     const loading = userLoading || (homeLoading && !!user);
@@ -49,6 +55,12 @@
         return () => clearTimeout(timer);
       }
     }, [userError, router]);
+
+    useEffect(() => {
+      if (user && user.onboardingComplete === false) {
+        router.replace(`/onboarding/${slug}`);
+      }
+    }, [user, slug, router]);
 
     // ── Scroll listener ────────────────────────────────────────────────────────
     useEffect(() => {
@@ -104,6 +116,8 @@
     // ── Guards ─────────────────────────────────────────────────────────────────
     if (loading) return <LoadingScreen />;
 
+    if (user?.onboardingComplete === false) return <LoadingScreen />;
+
     if (error || !homeData || !user) {
       return (
         <div style={{
@@ -131,9 +145,7 @@
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;900&display=swap');
           *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-          ::-webkit-scrollbar { display: none; }
-          * { scrollbar-width: none; }
-          body { background: #000; color: #fff; font-family: 'Outfit', sans-serif; overflow-x: hidden; }
+          body:not(.detail-modal-open) { overflow-x: hidden; }
         `}</style>
 
         <div style={{ minHeight: "100vh", background: "#000" }}>
@@ -198,6 +210,7 @@
             <DetailModal
               item={modalItem}
               onClose={() => setModalItem(null)}
+              onNavigate={(next) => setModalItem(next)}
             />
           )}
 

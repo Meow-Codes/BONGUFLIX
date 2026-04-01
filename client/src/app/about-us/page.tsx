@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   ChevronLeft,
   Database,
@@ -262,6 +263,52 @@ function MemberCard({ member, index }: { member: Member; index: number }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+function AboutNav() {
+  const searchParams = useSearchParams();
+  const returnTo = searchParams?.get("returnTo") ?? null;
+  const backHref =
+    returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")
+      ? returnTo
+      : "/";
+  const backLabel = returnTo?.startsWith("/dashboard") ? "Dashboard" : "Home";
+
+  return (
+    <nav style={{
+      position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+      height: "64px", padding: "0 4%",
+      display: "flex", alignItems: "center", gap: "20px",
+      background: "rgba(8,8,8,0.94)",
+      backdropFilter: "blur(14px)",
+      borderBottom: "1px solid rgba(255,255,255,0.05)",
+      animation: "navIn 0.6s ease both",
+    }}>
+      <Link href="/" style={{ textDecoration: "none" }}>
+        <span style={{
+          fontFamily: "'Bebas Neue', cursive",
+          fontSize: "26px", color: "#E50914",
+          letterSpacing: "0.14em",
+          animation: "logoGlow 3.5s ease-in-out infinite",
+        }}>BONGUFLIX</span>
+      </Link>
+
+      <Link href={backHref} className="nav-back">
+        <ChevronLeft size={14} />
+        {backLabel}
+      </Link>
+
+      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "9px" }}>
+        <div style={{
+          width: "7px", height: "7px", borderRadius: "50%", background: "#E50914",
+          animation: "pulseRed 2.2s ease-in-out infinite",
+        }} />
+        <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 500 }}>
+          About
+        </span>
+      </div>
+    </nav>
+  );
+}
+
 export default function AboutPage() {
   const [particles, setParticles] = useState<{ id: number; style: React.CSSProperties }[]>([]);
 
@@ -385,40 +432,9 @@ export default function AboutPage() {
           {particles.map((p) => <div key={p.id} style={p.style} />)}
         </div>
 
-        {/* Navbar */}
-        <nav style={{
-          position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-          height: "64px", padding: "0 4%",
-          display: "flex", alignItems: "center", gap: "20px",
-          background: "rgba(8,8,8,0.94)",
-          backdropFilter: "blur(14px)",
-          borderBottom: "1px solid rgba(255,255,255,0.05)",
-          animation: "navIn 0.6s ease both",
-        }}>
-          <Link href="/" style={{ textDecoration: "none" }}>
-            <span style={{
-              fontFamily: "'Bebas Neue', cursive",
-              fontSize: "26px", color: "#E50914",
-              letterSpacing: "0.14em",
-              animation: "logoGlow 3.5s ease-in-out infinite",
-            }}>BONGUFLIX</span>
-          </Link>
-
-          <Link href="/" className="nav-back">
-            <ChevronLeft size={14} />
-            Home
-          </Link>
-
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "9px" }}>
-            <div style={{
-              width: "7px", height: "7px", borderRadius: "50%", background: "#E50914",
-              animation: "pulseRed 2.2s ease-in-out infinite",
-            }} />
-            <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 500 }}>
-              About
-            </span>
-          </div>
-        </nav>
+        <Suspense fallback={null}>
+          <AboutNav />
+        </Suspense>
 
         {/* Page content */}
         <div style={{

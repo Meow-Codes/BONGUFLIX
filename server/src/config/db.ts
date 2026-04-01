@@ -32,5 +32,10 @@ export const initDB = async (): Promise<void> => {
     CREATE INDEX IF NOT EXISTS idx_sessions_expires ON user_sessions(expires_at);
     CREATE INDEX IF NOT EXISTS idx_users_slug ON users(slug);
   `);
+
+  await pool.query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_pic TEXT;
+  `);
+
   console.log("Database tables initialized with password support");
 };

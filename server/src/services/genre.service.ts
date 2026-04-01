@@ -1,6 +1,10 @@
 import { pool } from "../config/db.js";
 import { cache, TTL } from "../utils/cache.js";
 import type { Genre, GenreStats } from "../types/media.types.js";
+import { ONBOARDING_INTEREST_KEYWORDS } from "../data/onboardingKeywords.js";
+
+/** Genres safe for onboarding picker (TMDB list has no explicit adult genre) */
+const BLOCKED_GENRE = /adult|xxx|porn|erotic/i;
 
 export const getGenres = async (): Promise<Genre[]> => {
   const cacheKey = "genres:all";
@@ -14,6 +18,17 @@ export const getGenres = async (): Promise<Genre[]> => {
   await cache.set(cacheKey, rows, TTL.GENRES);
   return rows;
 };
+
+export const getOnboardingGenreNames = async (): Promise<string[]> => {
+  const all = await getGenres();
+  return all
+    .map((g) => g.name)
+    .filter((name) => name && !BLOCKED_GENRE.test(name));
+};
+
+export const getOnboardingInterestKeywords = (): string[] => [
+  ...ONBOARDING_INTEREST_KEYWORDS,
+];
 
 export const getGenreStats = async (): Promise<GenreStats[]> => {
   const cacheKey = "genres:stats";

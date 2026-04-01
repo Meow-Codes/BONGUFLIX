@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
-import { registerUser, loginUser, logoutUser } from "../services/auth.service.js";
+import { pool } from "../config/db.js";
+import { registerUser, loginUser, logoutUser, logoutAllSessionsForUser } from "../services/auth.service.js";
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -53,4 +54,63 @@ export const logout = async (req: Request, res: Response) => {
   if (sessionId) await logoutUser(sessionId);
   res.clearCookie("sessionId");
   res.json({ success: true });
+};
+
+/** End every session for this account (all devices). Clears current cookie. */
+export const logoutAllSessions = async (req: Request, res: Response) => {
+  const sessionId =
+    typeof req.headers["x-session-id"] === "string"
+      ? req.headers["x-session-id"]
+      : req.cookies?.sessionId;
+  if (!sessionId) {
+    res.status(401).json({ error: "No session" });
+    return;
+  }
+  try {
+    await logoutAllSessionsForUser(sessionId);
+    res.clearCookie("sessionId");
+    res.json({ success: true });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "";
+    if (msg === "INVALID_SESSION") {
+      res.status(401).json({ error: "Invalid session" });
+      return;
+    }
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+/** Current session — for landing-page redirect when already logged in */
+export const me = async (req: Request, res: Response) => {
+  const sessionId =
+    typeof req.headers["x-session-id"] === "string"
+      ? req.headers["x-session-id"]
+      : req.cookies?.sessionId;
+  if (!sessionId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  try {
+    const { rows } = await pool.query<{
+      slug: string;
+      username: string;
+      preferences: unknown;
+      profile_pic: string | null;
+    }>(
+      `SELECT u.slug, u.username, u.preferences, u.profile_pic
+       FROM users u
+       JOIN user_sessions s ON u.slug = s.slug
+       WHERE s.session_id = $1 AND s.expires_at > NOW()`,
+      [sessionId],
+    );
+    if (rows.length === 0) {
+      res.status(401).json({ error: "Invalid or expired session" });
+      return;
+    }
+    res.json(rows[0]);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
+  }
 };

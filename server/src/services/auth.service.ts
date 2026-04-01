@@ -26,8 +26,8 @@ export const registerUser = async (username: string, password: string) => {
   const passwordHash = await bcrypt.hash(password, 12);
 
   await pool.query(
-    `INSERT INTO users (username, slug, password_hash)
-     VALUES ($1, $2, $3)`,
+    `INSERT INTO users (username, slug, password_hash, preferences)
+     VALUES ($1, $2, $3, '{"onboardingComplete": false}'::jsonb)`,
     [cleanUsername, slug, passwordHash],
   );
 
@@ -39,7 +39,13 @@ export const registerUser = async (username: string, password: string) => {
     [sessionId, cleanUsername, slug],
   );
 
-  return { success: true, slug, sessionId };
+  return {
+    success: true,
+    slug,
+    sessionId,
+    isNewUser: true,
+    onboardingComplete: false,
+  };
 };
 
 export const loginUser = async (username: string, password: string) => {
@@ -80,11 +86,33 @@ export const loginUser = async (username: string, password: string) => {
     [sessionId, cleanUsername, user.slug],
   );
 
-  return { success: true, slug: user.slug, sessionId };
+  const prefRow = await pool.query<{ preferences: { onboardingComplete?: boolean } | null }>(
+    "SELECT preferences FROM users WHERE username = $1",
+    [cleanUsername],
+  );
+  const prefs = prefRow.rows[0]?.preferences as Record<string, unknown> | null;
+  const onboardingComplete =
+    prefs && typeof prefs === "object" && Object.prototype.hasOwnProperty.call(prefs, "onboardingComplete")
+      ? prefs.onboardingComplete === true
+      : true;
+
+  return { success: true, slug: user.slug, sessionId, isNewUser: false, onboardingComplete };
 };
 
 export const logoutUser = async (sessionId: string) => {
   await pool.query("DELETE FROM user_sessions WHERE session_id = $1", [
     sessionId,
   ]);
+};
+
+/** Deletes every session row for the same username as the current session (all devices). */
+export const logoutAllSessionsForUser = async (sessionId: string) => {
+  const { rows } = await pool.query<{ username: string }>(
+    "SELECT username FROM user_sessions WHERE session_id = $1 AND expires_at > NOW()",
+    [sessionId],
+  );
+  const row = rows[0];
+  if (!row) throw new Error("INVALID_SESSION");
+  const { username } = row;
+  await pool.query("DELETE FROM user_sessions WHERE username = $1", [username]);
 };
