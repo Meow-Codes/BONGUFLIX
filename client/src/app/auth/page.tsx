@@ -80,7 +80,7 @@ export default function AuthPage() {
       const res = await fetch(`${API_URL}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // No credentials: "include" needed — we're not using cookies
+        credentials: "include", // ESSENTIAL for browser to save the Set-Cookie header on cross-origin
         body: JSON.stringify({
           username: username.trim(),
           password: password.trim(),
@@ -100,10 +100,7 @@ export default function AuthPage() {
         return;
       }
 
-      // Store sessionId in localStorage instead of relying on cookie
-      if (data.sessionId) {
-        localStorage.setItem("sessionId", data.sessionId);
-      }
+      // Session is now securely stored in an HttpOnly cookie automatically.
 
       toast.success(isLogin ? "Welcome back!" : "Account created!");
 
@@ -487,6 +484,7 @@ export default function AuthPage() {
                       required
                       className="flex-1 bg-transparent text-white text-sm placeholder-white/25 focus:outline-none"
                       style={{ caretColor: "#E50914" }}
+                      autoComplete={isLogin ? "current-password" : "new-password"}
                     />
                     <button
                       type="button"

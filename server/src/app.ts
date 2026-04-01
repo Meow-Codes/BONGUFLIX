@@ -41,6 +41,9 @@ app.use(cors({
   credentials: true,
 }));
 
+// Trust the first proxy (e.g., Nginx, Vercel, AWS ALB) for correct rate limiting IP
+app.set("trust proxy", 1);
+
 // ─── Body parsing ─────────────────────────────────────────────────────────────
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
@@ -68,7 +71,14 @@ const mediaLimiter = rateLimit({
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/user", userRoutes);
-app.use("/api", mediaLimiter, mediaRoutes);
+
+// Add Cache-Control header for media endpoints since they are globally cached in Redis
+app.use("/api", mediaLimiter, (req, res, next) => {
+  if (req.method === "GET") {
+    res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes 
+  }
+  next();
+}, mediaRoutes);
 
 // ─── Health / diagnostics ─────────────────────────────────────────────────────
 app.get("/", (_req: Request, res: Response) => {

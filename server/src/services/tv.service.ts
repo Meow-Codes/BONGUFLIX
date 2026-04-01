@@ -43,7 +43,7 @@ export const getTVShows = async (req: Request) => {
   const { genre, sort = "popularity", order = "desc", status, lang, min_rating } = req.query;
 
   const cacheKey = `tv:list:${JSON.stringify({ page, limit, genre, sort, order, status, lang, min_rating })}`;
-  const cached = cache.get(cacheKey);
+  const cached = await cache.get(cacheKey);
   if (cached) return cached;
 
   const conditions: string[] = [];
@@ -95,7 +95,7 @@ export const getTVShows = async (req: Request) => {
   const enriched = await enrichShows(rows);
   const total = parseInt(countRows[0]?.count || "0", 10);
   const result = buildPaginatedResponse(enriched, total, { page, limit, offset });
-  cache.set(cacheKey, result, TTL.LIST);
+  await cache.set(cacheKey, result, TTL.LIST);
   return result;
 };
 
@@ -103,7 +103,7 @@ export const getTVShows = async (req: Request) => {
 
 export const getTVShowById = async (id: number): Promise<TVShow | null> => {
   const cacheKey = `tv:${id}`;
-  const cached = cache.get<TVShow>(cacheKey);
+  const cached = await cache.get<TVShow>(cacheKey);
   if (cached) return cached;
 
   const { rows } = await pool.query<TVShow>(
@@ -113,7 +113,7 @@ export const getTVShowById = async (id: number): Promise<TVShow | null> => {
   if (!rows.length) return null;
 
   const [enriched] = await enrichShows(rows, true);
-  cache.set(cacheKey, enriched, TTL.DETAIL);
+  await cache.set(cacheKey, enriched, TTL.DETAIL);
   return enriched || null;
 };
 
@@ -121,7 +121,7 @@ export const getTVShowById = async (id: number): Promise<TVShow | null> => {
 
 export const getTrendingTV = async (limit = 20): Promise<TVShow[]> => {
   const cacheKey = `tv:trending:${limit}`;
-  const cached = cache.get<TVShow[]>(cacheKey);
+  const cached = await cache.get<TVShow[]>(cacheKey);
   if (cached) return cached;
 
   const { rows } = await pool.query<TVShow>(
@@ -135,7 +135,7 @@ export const getTrendingTV = async (limit = 20): Promise<TVShow[]> => {
   );
 
   const enriched = await enrichShows(rows);
-  cache.set(cacheKey, enriched, TTL.TRENDING);
+  await cache.set(cacheKey, enriched, TTL.TRENDING);
   return enriched;
 };
 
@@ -143,7 +143,7 @@ export const getTrendingTV = async (limit = 20): Promise<TVShow[]> => {
 
 export const getTopRatedTV = async (limit = 20): Promise<TVShow[]> => {
   const cacheKey = `tv:toprated:${limit}`;
-  const cached = cache.get<TVShow[]>(cacheKey);
+  const cached = await cache.get<TVShow[]>(cacheKey);
   if (cached) return cached;
 
   const { rows } = await pool.query<TVShow>(
@@ -157,7 +157,7 @@ export const getTopRatedTV = async (limit = 20): Promise<TVShow[]> => {
   );
 
   const enriched = await enrichShows(rows);
-  cache.set(cacheKey, enriched, TTL.TRENDING);
+  await cache.set(cacheKey, enriched, TTL.TRENDING);
   return enriched;
 };
 
@@ -165,7 +165,7 @@ export const getTopRatedTV = async (limit = 20): Promise<TVShow[]> => {
 
 export const getTVByGenre = async (genreName: string, limit = 20): Promise<TVShow[]> => {
   const cacheKey = `tv:genre:${genreName}:${limit}`;
-  const cached = cache.get<TVShow[]>(cacheKey);
+  const cached = await cache.get<TVShow[]>(cacheKey);
   if (cached) return cached;
 
   const { rows } = await pool.query<TVShow>(
@@ -181,7 +181,7 @@ export const getTVByGenre = async (genreName: string, limit = 20): Promise<TVSho
   );
 
   const enriched = await enrichShows(rows);
-  cache.set(cacheKey, enriched, TTL.LIST);
+  await cache.set(cacheKey, enriched, TTL.LIST);
   return enriched;
 };
 
@@ -189,7 +189,7 @@ export const getTVByGenre = async (genreName: string, limit = 20): Promise<TVSho
 
 export const getSimilarTV = async (showId: number, limit = 12): Promise<TVShow[]> => {
   const cacheKey = `tv:${showId}:similar`;
-  const cached = cache.get<TVShow[]>(cacheKey);
+  const cached = await cache.get<TVShow[]>(cacheKey);
   if (cached) return cached;
 
   const { rows } = await pool.query<TVShow>(
@@ -209,7 +209,7 @@ export const getSimilarTV = async (showId: number, limit = 12): Promise<TVShow[]
   );
 
   const enriched = await enrichShows(rows);
-  cache.set(cacheKey, enriched, TTL.DETAIL);
+  await cache.set(cacheKey, enriched, TTL.DETAIL);
   return enriched;
 };
 
@@ -217,7 +217,7 @@ export const getSimilarTV = async (showId: number, limit = 12): Promise<TVShow[]
 
 export const getSeasons = async (showId: number): Promise<Season[]> => {
   const cacheKey = `tv:${showId}:seasons`;
-  const cached = cache.get<Season[]>(cacheKey);
+  const cached = await cache.get<Season[]>(cacheKey);
   if (cached) return cached;
 
   const { rows } = await pool.query<Season>(
@@ -228,7 +228,7 @@ export const getSeasons = async (showId: number): Promise<Season[]> => {
     [showId]
   );
 
-  cache.set(cacheKey, rows, TTL.DETAIL);
+  await cache.set(cacheKey, rows, TTL.DETAIL);
   return rows;
 };
 
@@ -236,7 +236,7 @@ export const getSeasons = async (showId: number): Promise<Season[]> => {
 
 export const getEpisodes = async (showId: number, seasonNumber: number): Promise<Episode[]> => {
   const cacheKey = `tv:${showId}:s${seasonNumber}:episodes`;
-  const cached = cache.get<Episode[]>(cacheKey);
+  const cached = await cache.get<Episode[]>(cacheKey);
   if (cached) return cached;
 
   const { rows } = await pool.query<Episode>(
@@ -250,6 +250,6 @@ export const getEpisodes = async (showId: number, seasonNumber: number): Promise
     [showId, seasonNumber]
   );
 
-  cache.set(cacheKey, rows, TTL.DETAIL);
+  await cache.set(cacheKey, rows, TTL.DETAIL);
   return rows;
 };

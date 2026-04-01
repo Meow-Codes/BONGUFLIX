@@ -60,7 +60,7 @@ export const getMovies = async (req: Request) => {
   } = req.query;
 
   const cacheKey = `movies:list:${JSON.stringify({ page, limit, genre, year, sort, order, lang, min_rating })}`;
-  const cached = cache.get<ReturnType<typeof buildPaginatedResponse>>(cacheKey);
+  const cached = await cache.get<ReturnType<typeof buildPaginatedResponse>>(cacheKey);
   if (cached) return cached;
 
   const conditions: string[] = ["m.vote_average IS NOT NULL"];
@@ -120,7 +120,7 @@ export const getMovies = async (req: Request) => {
     offset,
   });
 
-  cache.set(cacheKey, result, TTL.LIST);
+  await cache.set(cacheKey, result, TTL.LIST);
   return result;
 };
 
@@ -128,7 +128,7 @@ export const getMovies = async (req: Request) => {
 
 export const getMovieById = async (id: number): Promise<Movie | null> => {
   const cacheKey = `movie:${id}`;
-  const cached = cache.get<Movie>(cacheKey);
+  const cached = await cache.get<Movie>(cacheKey);
   if (cached) return cached;
 
   const { rows } = await pool.query<Movie>(
@@ -138,7 +138,7 @@ export const getMovieById = async (id: number): Promise<Movie | null> => {
   if (!rows.length) return null;
 
   const [enriched] = await enrichMovies(rows, true);
-  cache.set(cacheKey, enriched, TTL.DETAIL);
+  await cache.set(cacheKey, enriched, TTL.DETAIL);
   return enriched || null;
 };
 
@@ -146,7 +146,7 @@ export const getMovieById = async (id: number): Promise<Movie | null> => {
 
 export const getTrendingMovies = async (limit = 20): Promise<Movie[]> => {
   const cacheKey = `movies:trending:${limit}`;
-  const cached = cache.get<Movie[]>(cacheKey);
+  const cached = await cache.get<Movie[]>(cacheKey);
   if (cached) return cached;
 
   const { rows } = await pool.query<Movie>(
@@ -161,7 +161,7 @@ export const getTrendingMovies = async (limit = 20): Promise<Movie[]> => {
   );
 
   const enriched = await enrichMovies(rows);
-  cache.set(cacheKey, enriched, TTL.TRENDING);
+  await cache.set(cacheKey, enriched, TTL.TRENDING);
   return enriched;
 };
 
@@ -169,7 +169,7 @@ export const getTrendingMovies = async (limit = 20): Promise<Movie[]> => {
 
 export const getTopRatedMovies = async (limit = 20): Promise<Movie[]> => {
   const cacheKey = `movies:toprated:${limit}`;
-  const cached = cache.get<Movie[]>(cacheKey);
+  const cached = await cache.get<Movie[]>(cacheKey);
   if (cached) return cached;
 
   const { rows } = await pool.query<Movie>(
@@ -184,7 +184,7 @@ export const getTopRatedMovies = async (limit = 20): Promise<Movie[]> => {
   );
 
   const enriched = await enrichMovies(rows);
-  cache.set(cacheKey, enriched, TTL.TRENDING);
+  await cache.set(cacheKey, enriched, TTL.TRENDING);
   return enriched;
 };
 
@@ -195,7 +195,7 @@ export const getMoviesByGenre = async (
   limit = 20,
 ): Promise<Movie[]> => {
   const cacheKey = `movies:genre:${genreName}:${limit}`;
-  const cached = cache.get<Movie[]>(cacheKey);
+  const cached = await cache.get<Movie[]>(cacheKey);
   if (cached) return cached;
 
   const { rows } = await pool.query<Movie>(
@@ -211,7 +211,7 @@ export const getMoviesByGenre = async (
   );
 
   const enriched = await enrichMovies(rows);
-  cache.set(cacheKey, enriched, TTL.LIST);
+  await cache.set(cacheKey, enriched, TTL.LIST);
   return enriched;
 };
 
@@ -222,7 +222,7 @@ export const getSimilarMovies = async (
   limit = 12,
 ): Promise<Movie[]> => {
   const cacheKey = `movie:${movieId}:similar`;
-  const cached = cache.get<Movie[]>(cacheKey);
+  const cached = await cache.get<Movie[]>(cacheKey);
   if (cached) return cached;
 
   const { rows } = await pool.query<Movie>(
@@ -242,7 +242,7 @@ export const getSimilarMovies = async (
   );
 
   const enriched = await enrichMovies(rows);
-  cache.set(cacheKey, enriched, TTL.DETAIL);
+  await cache.set(cacheKey, enriched, TTL.DETAIL);
   return enriched;
 };
 
@@ -250,7 +250,7 @@ export const getSimilarMovies = async (
 
 export const getNewMovies = async (limit = 20): Promise<Movie[]> => {
   const cacheKey = `movies:new:${limit}`;
-  const cached = cache.get<Movie[]>(cacheKey);
+  const cached = await cache.get<Movie[]>(cacheKey);
   if (cached) return cached;
 
   const { rows } = await pool.query<Movie>(
@@ -264,6 +264,6 @@ export const getNewMovies = async (limit = 20): Promise<Movie[]> => {
   );
 
   const enriched = await enrichMovies(rows);
-  cache.set(cacheKey, enriched, TTL.LIST);
+  await cache.set(cacheKey, enriched, TTL.LIST);
   return enriched;
 };

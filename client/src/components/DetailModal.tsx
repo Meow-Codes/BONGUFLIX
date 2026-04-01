@@ -13,12 +13,13 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:6942";
 interface DetailModalProps {
   item: MediaItem;
   onClose: () => void;
-  sessionId: string;
 }
 
 type Tab = "overview" | "episodes" | "similar";
 
-export const DetailModal = ({ item, onClose, sessionId }: DetailModalProps) => {
+import { fetchMovieDetail, fetchTVDetail, fetchSimilar, fetchSeasons, fetchEpisodes } from "@/utils/api";
+
+export const DetailModal = ({ item, onClose }: DetailModalProps) => {
   const [full, setFull] = useState<MediaItem | null>(null);
   const [similar, setSimilar] = useState<MediaItem[]>([]);
   const [seasons, setSeasons] = useState<Season[]>([]);
@@ -28,28 +29,28 @@ export const DetailModal = ({ item, onClose, sessionId }: DetailModalProps) => {
   const [loadingDetail, setLoadingDetail] = useState(true);
   const [loadingEp, setLoadingEp] = useState(false);
 
-  const headers = { "X-Session-Id": sessionId };
-
   useEffect(() => {
     document.body.style.overflow = "hidden";
 
     const load = async () => {
       try {
-        const [detailRes, simRes] = await Promise.all([
-          fetch(`${API_URL}/api/${item.media_type}s/${item.id}`, { headers }),
-          fetch(`${API_URL}/api/${item.media_type}s/${item.id}/similar`, { headers }),
+        const detailFn = item.media_type === "movie" ? fetchMovieDetail : fetchTVDetail;
+        
+        const [detailData, simData] = await Promise.all([
+          detailFn(item.id),
+          fetchSimilar(item.id, item.media_type)
         ]);
 
-        if (detailRes.ok) setFull(await detailRes.json());
-        if (simRes.ok) {
-          const sd = await simRes.json();
+        if (detailData) setFull(detailData);
+        if (simData) {
+          const sd = simData;
           setSimilar(Array.isArray(sd) ? sd : (sd.data ?? []));
         }
 
         if (item.media_type === "tv") {
-          const sRes = await fetch(`${API_URL}/api/tv/${item.id}/seasons`, { headers });
-          if (sRes.ok) {
-            const sd = await sRes.json();
+          const sRes = await fetchSeasons(item.id);
+          if (sRes) {
+            const sd = sRes;
             const allSeasons: Season[] = Array.isArray(sd) ? sd : (sd.data ?? []);
             const real = allSeasons.filter((s) => s.season_number > 0);
             setSeasons(real);
@@ -74,9 +75,8 @@ export const DetailModal = ({ item, onClose, sessionId }: DetailModalProps) => {
   const loadEpisodes = async (seasonNum: number) => {
     setLoadingEp(true);
     try {
-      const r = await fetch(`${API_URL}/api/tv/${item.id}/seasons/${seasonNum}/episodes`, { headers });
-      if (r.ok) {
-        const d = await r.json();
+      const d = await fetchEpisodes(item.id, seasonNum);
+      if (d) {
         setEpisodes(Array.isArray(d) ? d : (d.data ?? []));
       }
     } catch (e) { console.error(e); }

@@ -6,7 +6,8 @@ export const requireAuth = async (
   res: Response,
   next: NextFunction
 ): Promise<void> => {
-  const rawSessionId = req.headers["x-session-id"] ?? req.query.sessionId;
+  // Prioritize HttpOnly cookie, fallback to header if needed for Postman/testing
+  const rawSessionId = req.cookies?.sessionId || req.headers["x-session-id"] || req.query.sessionId;
 
   const sessionId =
     typeof rawSessionId === "string" ? rawSessionId : undefined;

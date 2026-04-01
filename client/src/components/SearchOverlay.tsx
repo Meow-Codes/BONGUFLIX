@@ -21,7 +21,6 @@ interface SearchResult {
 interface SearchOverlayProps {
   onClose: () => void;
   onSelect: (item: MediaItem) => void;
-  sessionId: string;
 }
 
 const MediaTypeIcon = ({ type }: { type: string }) => {
@@ -36,7 +35,9 @@ const typeColor: Record<string, string> = {
   person: "rgba(255,255,255,0.4)",
 };
 
-export const SearchOverlay = ({ onClose, onSelect, sessionId }: SearchOverlayProps) => {
+import { fetchSearch } from "@/utils/api";
+
+export const SearchOverlay = ({ onClose, onSelect }: SearchOverlayProps) => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -71,10 +72,7 @@ export const SearchOverlay = ({ onClose, onSelect, sessionId }: SearchOverlayPro
     if (debouncedQuery.trim().length < 2) { setResults([]); return; }
     setLoading(true);
     setActiveIdx(-1);
-    fetch(`${API_URL}/api/search?q=${encodeURIComponent(debouncedQuery.trim())}`, {
-      headers: { "X-Session-Id": sessionId },
-    })
-      .then((r) => r.json())
+    fetchSearch(debouncedQuery.trim())
       .then((data) => {
         // backend returns { query, results } OR array
         const arr = Array.isArray(data) ? data : (data.results ?? []);
@@ -82,7 +80,7 @@ export const SearchOverlay = ({ onClose, onSelect, sessionId }: SearchOverlayPro
       })
       .catch(() => setResults([]))
       .finally(() => setLoading(false));
-  }, [debouncedQuery, sessionId]);
+  }, [debouncedQuery]);
 
   const handleSelect = (r: SearchResult) => {
     if (r.media_type === "person") return;

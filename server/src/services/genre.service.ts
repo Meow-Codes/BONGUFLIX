@@ -4,20 +4,20 @@ import type { Genre, GenreStats } from "../types/media.types.js";
 
 export const getGenres = async (): Promise<Genre[]> => {
   const cacheKey = "genres:all";
-  const cached = cache.get<Genre[]>(cacheKey);
+  const cached = await cache.get<Genre[]>(cacheKey);
   if (cached) return cached;
 
   const { rows } = await pool.query<Genre>(
     `SELECT id, name, tmdb_id FROM genres ORDER BY name`
   );
 
-  cache.set(cacheKey, rows, TTL.GENRES);
+  await cache.set(cacheKey, rows, TTL.GENRES);
   return rows;
 };
 
 export const getGenreStats = async (): Promise<GenreStats[]> => {
   const cacheKey = "genres:stats";
-  const cached = cache.get<GenreStats[]>(cacheKey);
+  const cached = await cache.get<GenreStats[]>(cacheKey);
   if (cached) return cached;
 
   const { rows } = await pool.query<GenreStats>(
@@ -32,6 +32,6 @@ export const getGenreStats = async (): Promise<GenreStats[]> => {
      ORDER BY (movie_count + tv_count) DESC`
   );
 
-  cache.set(cacheKey, rows, TTL.GENRES);
+  await cache.set(cacheKey, rows, TTL.GENRES);
   return rows;
 };

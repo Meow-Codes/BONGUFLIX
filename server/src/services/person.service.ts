@@ -4,7 +4,7 @@ import type { Person } from "../types/media.types.js";
 
 export const getPopularPeople = async (limit = 20): Promise<Person[]> => {
   const cacheKey = `people:popular:${limit}`;
-  const cached = cache.get<Person[]>(cacheKey);
+  const cached = await cache.get<Person[]>(cacheKey);
   if (cached) return cached;
 
   const { rows } = await pool.query<Person>(
@@ -16,13 +16,13 @@ export const getPopularPeople = async (limit = 20): Promise<Person[]> => {
     [limit]
   );
 
-  cache.set(cacheKey, rows, TTL.PERSON);
+  await cache.set(cacheKey, rows, TTL.PERSON);
   return rows;
 };
 
 export const getPersonById = async (id: number) => {
   const cacheKey = `person:${id}`;
-  const cached = cache.get(cacheKey);
+  const cached = await cache.get(cacheKey);
   if (cached) return cached;
 
   const { rows: personRows } = await pool.query(
@@ -47,6 +47,6 @@ export const getPersonById = async (id: number) => {
   );
 
   const result = { ...person, credits };
-  cache.set(cacheKey, result, TTL.PERSON);
+  await cache.set(cacheKey, result, TTL.PERSON);
   return result;
 };

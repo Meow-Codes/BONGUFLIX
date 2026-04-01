@@ -1,11 +1,10 @@
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:6942";
 
-const getSession = () =>
-  typeof window !== "undefined" ? localStorage.getItem("sessionId") ?? "" : "";
-
-const apiFetch = async <T>(path: string): Promise<T> => {
+const apiFetch = async <T>(path: string, options: RequestInit = {}): Promise<T> => {
   const res = await fetch(`${API}${path}`, {
-    headers: { "X-Session-Id": getSession() },
+    ...options,
+    credentials: "include",
+    headers: { ...options.headers },
   });
   if (!res.ok) throw new Error(`API ${res.status}: ${path}`);
   return res.json() as Promise<T>;
@@ -13,85 +12,7 @@ const apiFetch = async <T>(path: string): Promise<T> => {
 
 // ─── Types (mirror backend) ───────────────────────────────────────────────────
 
-export type MediaItem = {
-  id: number;
-  tmdb_id: number | null;
-  title: string;
-  overview: string | null;
-  release_date: string | null;
-  year_released: number | null;
-  runtime: number | null;
-  popularity: number | null;
-  vote_average: number | null;
-  vote_count: number | null;
-  poster_path: string | null;
-  backdrop_path: string | null;
-  trailer_url: string | null;
-  age_certification: string | null;
-  imdb_rating: number | null;
-  media_type: "movie" | "tv";
-  genres?: string[];
-  cast?: CastMember[];
-  director?: string | null;
-  creator?: string | null;
-  // TV-only
-  number_of_seasons?: number | null;
-  number_of_episodes?: number | null;
-  status?: string | null;
-  first_air_date?: string | null;
-};
-
-export type CastMember = {
-  person_id: number;
-  name: string;
-  character_name: string | null;
-  profile_path: string | null;
-  order_number: number | null;
-};
-
-export type HomeRow = {
-  id: string;
-  title: string;
-  type: "movie" | "tv" | "mixed";
-  items: MediaItem[];
-};
-
-export type HomeResponse = {
-  hero: MediaItem | null;
-  rows: HomeRow[];
-};
-
-export type SearchResult = {
-  id: number;
-  media_type: "movie" | "tv" | "person";
-  title: string;
-  poster_path: string | null;
-  year: number | null;
-  vote_average: number | null;
-  overview: string | null;
-};
-
-export type Season = {
-  id: number;
-  tv_show_id: number;
-  season_number: number;
-  name: string | null;
-  overview: string | null;
-  poster_path: string | null;
-  air_date: string | null;
-  episode_count: number | null;
-};
-
-export type Episode = {
-  id: number;
-  episode_number: number;
-  title: string;
-  overview: string | null;
-  runtime: number | null;
-  air_date: string | null;
-  still_path: string | null;
-  vote_average: number | null;
-};
+import type { MediaItem, HomeRow, HomeResponse, SearchResult, Season, Episode } from "@/types/media.types";
 
 // ─── API helpers ──────────────────────────────────────────────────────────────
 
@@ -128,6 +49,9 @@ export const getRuntime = (item: MediaItem): string => {
 };
 
 // ─── Endpoints ────────────────────────────────────────────────────────────────
+
+export const fetchUser = (slug: string) =>
+  apiFetch<{ username: string; slug: string; randomSeed: number }>(`/api/user/${slug}`);
 
 export const fetchHome = () => apiFetch<HomeResponse>("/api/home");
 

@@ -4,69 +4,93 @@
  * hot paths like /home, /movies/trending, /tv/trending.
  */
 
-interface CacheEntry<T> {
-  value: T;
-  expiresAt: number;
-}
+import { createClient } from "redis";
 
-class MemoryCache {
-  private store = new Map<string, CacheEntry<unknown>>();
-  private hitCount = 0;
-  private missCount = 0;
+// Define our Redis client
+const redisClient = createClient({
+  url: process.env.REDIS_URL || "redis://localhost:6379",
+  socket: {
+    connectTimeout: 2000,
+    reconnectStrategy: (retries) => Math.min(retries * 50, 2000)
+  }
+});
 
-  set<T>(key: string, value: T, ttlSeconds: number): void {
-    this.store.set(key, {
-      value,
-      expiresAt: Date.now() + ttlSeconds * 1000,
-    });
+let isRedisConnected = false;
+
+redisClient.on("error", (err) => {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (!msg.includes("ECONNREFUSED")) {
+    console.error("Redis Client Error", err);
+  }
+  isRedisConnected = false;
+});
+
+redisClient.on("ready", () => {
+  isRedisConnected = true;
+});
+
+// Connect automatically
+(async () => {
+  try {
+    await redisClient.connect();
+    console.log("Redis connected successfully");
+  } catch (err) {
+    console.error("Failed to connect to Redis", err);
+  }
+})();
+
+class RedisCacheWrapper {
+  async set<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
+    if (!isRedisConnected) return; // Fallback silently
+    try {
+      await redisClient.setEx(key, ttlSeconds, JSON.stringify(value));
+    } catch (err) {
+      console.error(`Failed to set cache for ${key}:`, err);
+    }
   }
 
-  get<T>(key: string): T | null {
-    const entry = this.store.get(key);
-    if (!entry) { this.missCount++; return null; }
-    if (Date.now() > entry.expiresAt) {
-      this.store.delete(key);
-      this.missCount++;
+  async get<T>(key: string): Promise<T | null> {
+    if (!isRedisConnected) return null; // Fallback to DB fetch
+    try {
+      const data = await redisClient.get(key);
+      if (!data) return null;
+      return JSON.parse(data) as T;
+    } catch (err) {
+      console.error(`Failed to get cache for ${key}:`, err);
       return null;
     }
-    this.hitCount++;
-    return entry.value as T;
   }
 
-  del(key: string): void {
-    this.store.delete(key);
+  async del(key: string): Promise<void> {
+    if (!isRedisConnected) return;
+    try {
+      await redisClient.del(key);
+    } catch (err) {
+      console.error(`Failed to delete cache for ${key}:`, err);
+    }
   }
 
-  delPattern(pattern: string): void {
-    for (const key of this.store.keys()) {
-      if (key.includes(pattern)) this.store.delete(key);
+  async delPattern(pattern: string): Promise<void> {
+    if (!isRedisConnected) return;
+    try {
+      const keys = await redisClient.keys(`*${pattern}*`);
+      if (keys.length > 0) {
+        await redisClient.del(keys);
+      }
+    } catch (err) {
+      console.error(`Failed to delete pattern ${pattern}:`, err);
     }
   }
 
   stats() {
     return {
-      keys: this.store.size,
-      hits: this.hitCount,
-      misses: this.missCount,
-      hitRate: this.hitCount + this.missCount === 0
-        ? 0
-        : ((this.hitCount / (this.hitCount + this.missCount)) * 100).toFixed(1) + "%",
+      status: redisClient.isOpen ? "connected" : "disconnected",
+      type: "redis",
     };
-  }
-
-  // Purge expired entries — call periodically
-  purge(): void {
-    const now = Date.now();
-    for (const [key, entry] of this.store.entries()) {
-      if (now > entry.expiresAt) this.store.delete(key);
-    }
   }
 }
 
-export const cache = new MemoryCache();
-
-// Auto-purge every 5 minutes
-setInterval(() => cache.purge(), 5 * 60 * 1000);
+export const cache = new RedisCacheWrapper();
 
 // TTL constants (seconds)
 export const TTL = {

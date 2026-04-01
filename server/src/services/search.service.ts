@@ -10,7 +10,7 @@ export const search = async (
 
   const q = query.trim();
   const cacheKey = `search:${q.toLowerCase()}:${limit}`;
-  const cached = cache.get<SearchResult[]>(cacheKey);
+  const cached = await cache.get<SearchResult[]>(cacheKey);
   if (cached) return cached;
 
   // Use pg_trgm similarity for fuzzy matching — indexed on title/name columns
@@ -70,7 +70,7 @@ export const search = async (
     [q, `%${q}%`, limit]
   );
 
-  cache.set(cacheKey, rows, TTL.SEARCH);
+  await cache.set(cacheKey, rows, TTL.SEARCH);
   return rows;
 };
 
@@ -81,7 +81,7 @@ export const autocomplete = async (query: string): Promise<{ id: number; media_t
 
   const q = query.trim();
   const cacheKey = `autocomplete:${q.toLowerCase()}`;
-  const cached = cache.get<[]>(cacheKey);
+  const cached = await cache.get<[]>(cacheKey);
   if (cached) return cached;
 
   const { rows } = await pool.query(
@@ -95,6 +95,6 @@ export const autocomplete = async (query: string): Promise<{ id: number; media_t
     [`${q}%`]
   );
 
-  cache.set(cacheKey, rows, TTL.SEARCH);
+  await cache.set(cacheKey, rows, TTL.SEARCH);
   return rows;
 };

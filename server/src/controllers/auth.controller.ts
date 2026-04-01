@@ -8,7 +8,12 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Username and password are required" });
 
     const data = await registerUser(username, password);
-    // No cookie — client stores sessionId in localStorage
+    res.cookie("sessionId", data.sessionId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax", // 'lax' is safer for top-level navigation, 'strict' can be too aggressive if redirecting from other domains
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    });
     res.json(data);
   } catch (err: any) {
     if (err.message === "USERNAME_TAKEN")
@@ -24,7 +29,12 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Username and password are required" });
 
     const data = await loginUser(username, password);
-    // No cookie — client stores sessionId in localStorage
+    res.cookie("sessionId", data.sessionId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    });
     res.json(data);
   } catch (err: any) {
     if (err.message === "USER_NOT_FOUND")

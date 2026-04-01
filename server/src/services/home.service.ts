@@ -56,7 +56,7 @@ const fetchGenreRow = async (
 
 export const getHomeData = async (): Promise<HomeResponse> => {
   const cacheKey = "home:v1";
-  const cached = cache.get<HomeResponse>(cacheKey);
+  const cached = await cache.get<HomeResponse>(cacheKey);
   if (cached) return cached;
 
   // Run all queries in parallel — this is the key to zero latency
@@ -295,6 +295,6 @@ export const getHomeData = async (): Promise<HomeResponse> => {
   ].filter((r) => r.items.length >= 4) as HomeRow[];
 
   const result: HomeResponse = { hero, rows };
-  cache.set(cacheKey, result, TTL.HOME);
+  await cache.set(cacheKey, result, TTL.HOME);
   return result;
 };
