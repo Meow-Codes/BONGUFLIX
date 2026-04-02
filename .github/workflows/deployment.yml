@@ -14,14 +14,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Set Deploy Hook
+      - name: Determine Deploy Hook
         id: hook
         run: |
-          if [ "${GITHUB_REF##*/}" = "main" ]; then
+          BRANCH="${GITHUB_REF##*/}"
+          echo "Branch is $BRANCH"
+
+          if [ "$BRANCH" = "main" ]; then
             echo "url=${{ secrets.RENDER_DEPLOY_HOOK }}" >> $GITHUB_OUTPUT
-          elif [ "${GITHUB_REF##*/}" = "test" ]; then
+          elif [ "$BRANCH" = "test" ]; then
             echo "url=${{ secrets.RENDER_TEST_DEPLOY_HOOK }}" >> $GITHUB_OUTPUT
+          else
+            echo "No deploy for this branch"
+            exit 0
+          fi
+
+      - name: Validate Hook
+        run: |
+          if [ -z "${{ steps.hook.outputs.url }}" ]; then
+            echo "❌ Deploy hook URL is empty. Check GitHub Secrets."
+            exit 1
           fi
 
       - name: Trigger Webhook
-        run: curl -X POST "${{ steps.hook.outputs.url }}"
+        run: |
+          echo "🚀 Triggering deploy..."
+          curl -X POST "${{ steps.hook.outputs.url }}"
