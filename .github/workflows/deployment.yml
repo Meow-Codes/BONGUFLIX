@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - master
+      - test
     paths:
       - 'server/**'
 
@@ -12,6 +12,16 @@ jobs:
   deploy:
     name: Trigger Render Deploy
     runs-on: ubuntu-latest
+
     steps:
+      - name: Set Deploy Hook
+        id: hook
+        run: |
+          if [ "${GITHUB_REF##*/}" = "main" ]; then
+            echo "url=${{ secrets.RENDER_DEPLOY_HOOK }}" >> $GITHUB_OUTPUT
+          elif [ "${GITHUB_REF##*/}" = "test" ]; then
+            echo "url=${{ secrets.RENDER_TEST_DEPLOY_HOOK }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Trigger Webhook
-        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK || 'https://api.render.com/deploy/srv-d70rle7fte5s7385ftvg?key=z5GtHMgsRuY' }}
+        run: curl -X POST "${{ steps.hook.outputs.url }}"
