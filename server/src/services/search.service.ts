@@ -1,100 +1,137 @@
-import { pool } from "../config/db.js";
+import { typesenseClient } from "../config/typesense.js";
+import { MEDIA_COLLECTION } from "../config/typesense.schema.js";
 import { cache, TTL } from "../utils/cache.js";
 import type { SearchResult } from "../types/media.types.js";
 
+// ── Types ────────────────────────────────────────────────────────────────────
+
+interface TypesenseHit {
+  document: {
+    id: string;
+    title: string;
+    type: "movie" | "tv";
+    popularity: number;
+    vote_average: number;
+    year: number;
+    poster_path: string;
+    tmdb_id: number;
+  };
+  highlights?: Array<{
+    field: string;
+    snippet: string;
+    matched_tokens: string[];
+  }>;
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function parseNumericId(compositeId: string): number {
+  // "movie_123" → 123, "tv_456" → 456
+  const [, idPart] = compositeId.split("_");
+  return parseInt(idPart ?? "0", 10);
+}
+
+function hitToSearchResult(hit: TypesenseHit): SearchResult {
+  const doc = hit.document;
+  return {
+    id: parseNumericId(doc.id),
+    media_type: doc.type,
+    title: doc.title,
+    poster_path: doc.poster_path || null,
+    year: doc.year || null,
+    vote_average: doc.vote_average || null,
+    // highlight snippet if your SearchResult type supports it:
+    // highlight: hit.highlights?.find(h => h.field === "title")?.snippet,
+  };
+}
+
+// ── Main search ──────────────────────────────────────────────────────────────
+
 export const search = async (
   query: string,
-  limit = 20
+  limit = 20,
 ): Promise<SearchResult[]> => {
   if (!query || query.trim().length < 2) return [];
 
   const q = query.trim();
-  const cacheKey = `search:${q.toLowerCase()}:${limit}`;
+  const cacheKey = `search:ts:${q.toLowerCase()}:${limit}`;
+
   const cached = await cache.get<SearchResult[]>(cacheKey);
   if (cached) return cached;
 
-  // Use pg_trgm similarity for fuzzy matching — indexed on title/name columns
-  const { rows } = await pool.query<SearchResult>(
-    `(
-      SELECT
-        m.id,
-        'movie'              AS media_type,
-        m.title              AS title,
-        m.poster_path,
-        m.year_released      AS year,
-        m.vote_average,
-        m.overview,
-        similarity(m.title, $1) AS sim
-      FROM movies m
-      WHERE m.title % $1
-         OR m.title ILIKE $2
-      ORDER BY sim DESC, m.popularity DESC NULLS LAST
-      LIMIT $3
-    )
-    UNION ALL
-    (
-      SELECT
-        t.id,
-        'tv'                 AS media_type,
-        t.name               AS title,
-        t.poster_path,
-        EXTRACT(YEAR FROM t.first_air_date)::integer AS year,
-        t.vote_average,
-        t.overview,
-        similarity(t.name, $1) AS sim
-      FROM tv_shows t
-      WHERE t.name % $1
-         OR t.name ILIKE $2
-      ORDER BY sim DESC, t.popularity DESC NULLS LAST
-      LIMIT $3
-    )
-    UNION ALL
-    (
-      SELECT
-        p.id,
-        'person'             AS media_type,
-        p.name               AS title,
-        p.profile_path       AS poster_path,
-        NULL                 AS year,
-        NULL                 AS vote_average,
-        p.biography          AS overview,
-        similarity(p.name, $1) AS sim
-      FROM people p
-      WHERE p.name % $1
-         OR p.name ILIKE $2
-      ORDER BY sim DESC, p.popularity DESC NULLS LAST
-      LIMIT 5
-    )
-    ORDER BY sim DESC
-    LIMIT $3`,
-    [q, `%${q}%`, limit]
-  );
+  const searchParams = {
+    q,
+    query_by: "title",
+    sort_by: "_text_match:desc,popularity:desc,vote_average:desc",
+    per_page: limit,
+    // Typo tolerance: allow 1 typo for words 4+ chars, 2 typos for 8+ chars
+    num_typos: 2,
+    typo_tokens_threshold: 1,
+    // Prefix search (enables "dea" → "Death Note")
+    prefix: true,
+    // Highlight matched text in title
+    highlight_full_fields: "title",
+    highlight_affix_num_tokens: 4,
+    // Only return fields we need — reduces payload
+    include_fields: "id,title,type,popularity,vote_average,year,poster_path",
+    // Drop very low relevance results
+    drop_tokens_threshold: 1,
+  };
 
-  await cache.set(cacheKey, rows, TTL.SEARCH);
-  return rows;
+  const response = await typesenseClient
+    .collections(MEDIA_COLLECTION)
+    .documents()
+    .search(searchParams);
+
+  const results = (response.hits as TypesenseHit[]).map(hitToSearchResult);
+
+  await cache.set(cacheKey, results, TTL.SEARCH);
+  return results;
 };
 
-// ─── Autocomplete (fast, title-only, top 8) ───────────────────────────────────
+// ── Autocomplete (fast prefix-only, top 8, minimal payload) ─────────────────
 
-export const autocomplete = async (query: string): Promise<{ id: number; media_type: string; title: string; year: number | null; poster_path: string | null }[]> => {
+export const autocomplete = async (
+  query: string,
+): Promise<
+  Pick<SearchResult, "id" | "media_type" | "title" | "year" | "poster_path">[]
+> => {
   if (!query || query.trim().length < 2) return [];
 
   const q = query.trim();
-  const cacheKey = `autocomplete:${q.toLowerCase()}`;
+  const cacheKey = `autocomplete:ts:${q.toLowerCase()}`;
+
   const cached = await cache.get<[]>(cacheKey);
   if (cached) return cached;
 
-  const { rows } = await pool.query(
-    `(SELECT m.id, 'movie' AS media_type, m.title, m.year_released AS year, m.poster_path
-      FROM movies m WHERE m.title ILIKE $1 ORDER BY m.popularity DESC LIMIT 5)
-     UNION ALL
-     (SELECT t.id, 'tv' AS media_type, t.name AS title,
-             EXTRACT(YEAR FROM t.first_air_date)::integer AS year, t.poster_path
-      FROM tv_shows t WHERE t.name ILIKE $1 ORDER BY t.popularity DESC LIMIT 5)
-     ORDER BY title LIMIT 8`,
-    [`${q}%`]
-  );
+  const response = await typesenseClient
+  .collections(MEDIA_COLLECTION)
+  .documents()
+  .search({
+    q,
+    query_by: "title",
+    sort_by: "_text_match:desc,popularity:desc",
+    per_page: 8,
+    prefix: true,
+    num_typos: 1,
+    include_fields: "id,title,type,year,poster_path",
+    exclude_fields: "popularity,vote_average,tmdb_id",
+    query_by_weights: "3",
+    drop_tokens_threshold: 1,
+    filter_by: "popularity:>10",
 
-  await cache.set(cacheKey, rows, TTL.SEARCH);
-  return rows;
+    min_len_1typo: 4,
+    min_len_2typo: 8,
+  });
+
+  const results = (response.hits as TypesenseHit[]).map((hit) => ({
+    id: parseNumericId(hit.document.id),
+    media_type: hit.document.type,
+    title: hit.document.title,
+    year: hit.document.year || null,
+    poster_path: hit.document.poster_path || null,
+  }));
+
+  await cache.set(cacheKey, results, TTL.SEARCH);
+  return results;
 };

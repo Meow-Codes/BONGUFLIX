@@ -6,7 +6,10 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsx watch src/app.ts"
+    "dev": "tsx watch src/app.ts",
+    "ts:create": "ts-node --esm src/scripts/createTypesenseCollection.ts",
+    "ts:sync": "ts-node --esm src/scripts/syncToTypesense.ts",
+    "ts:resync": "npm run ts:create && npm run ts:sync"
   },
   "keywords": [],
   "author": "",
@@ -25,7 +28,8 @@
     "helmet": "^8.1.0",
     "multer": "^1.4.5-lts.1",
     "pg": "^8.20.0",
-    "redis": "^5.11.0"
+    "redis": "^5.11.0",
+    "typesense": "^3.0.5"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
