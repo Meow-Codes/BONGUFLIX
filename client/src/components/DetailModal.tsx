@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   X, Play, Plus, Star, Clock, ThumbsUp, Share2,
   ChevronDown, Loader2,
@@ -28,6 +29,11 @@ export const DetailModal = ({ item, onClose, onNavigate }: DetailModalProps) => 
   const [tab, setTab] = useState<Tab>("overview");
   const [loadingDetail, setLoadingDetail] = useState(true);
   const [loadingEp, setLoadingEp] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -71,7 +77,7 @@ export const DetailModal = ({ item, onClose, onNavigate }: DetailModalProps) => 
 
     load();
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = "auto";
       document.body.classList.remove("detail-modal-open");
     };
   }, [item]);
@@ -102,7 +108,9 @@ export const DetailModal = ({ item, onClose, onNavigate }: DetailModalProps) => 
   const backdrop = imgUrl(display.backdrop_path, "original") || imgUrl(display.poster_path, "w780");
   const tabs: Tab[] = ["overview", ...(display.media_type === "tv" ? ["episodes" as Tab] : []), "similar"];
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&display=swap');
@@ -111,8 +119,8 @@ export const DetailModal = ({ item, onClose, onNavigate }: DetailModalProps) => 
           position: fixed; inset: 0; z-index: 10000;
           background: rgba(0,0,0,0.78);
           backdrop-filter: blur(10px);
-          display: flex; align-items: flex-start; justify-content: center;
-          padding: 40px 16px 60px;
+          display: flex; align-items: center; justify-content: center;
+          padding: 24px 16px;
           overflow-y: auto;
           overflow-x: hidden;
           animation: modalBgIn 0.22s ease;
@@ -595,5 +603,5 @@ export const DetailModal = ({ item, onClose, onNavigate }: DetailModalProps) => 
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </>
-  );
+  , document.body);
 };
