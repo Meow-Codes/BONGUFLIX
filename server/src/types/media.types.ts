@@ -127,10 +127,10 @@ export interface SearchResult {
   id: number;
   media_type: "movie" | "tv" | "person";
   title: string;
-  poster_path?: string;
+  poster_path?: string | null;
   year?: number | null;
-  vote_average?: number;
-  overview?: string;
+  vote_average?: number | null;
+  overview?: string | null;
 }
 
 export interface PaginatedResponse<T> {

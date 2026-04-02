@@ -18,9 +18,11 @@ const app = express();
 const PORT = Number(process.env.PORT) || 6942;
 
 // ─── Security headers ─────────────────────────────────────────────────────────
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }, // allow TMDB image proxying
-}));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }, // allow TMDB image proxying
+  }),
+);
 
 // ─── Compression ─────────────────────────────────────────────────────────────
 app.use(compression());
@@ -34,13 +36,15 @@ const allowedOrigins = [
   "http://localhost:3001",
 ].filter(Boolean) as string[];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) callback(null, true);
-    else callback(new Error("Not allowed by CORS"));
-  },
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) callback(null, true);
+      else callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  }),
+);
 
 // Trust the first proxy (e.g., Nginx, Vercel, AWS ALB) for correct rate limiting IP
 app.set("trust proxy", 1);
@@ -74,12 +78,17 @@ app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/user", userRoutes);
 
 // Add Cache-Control header for media endpoints since they are globally cached in Redis
-app.use("/api", mediaLimiter, (req, res, next) => {
-  if (req.method === "GET") {
-    res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes 
-  }
-  next();
-}, mediaRoutes);
+app.use(
+  "/api",
+  mediaLimiter,
+  (req, res, next) => {
+    if (req.method === "GET") {
+      res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes
+    }
+    next();
+  },
+  mediaRoutes,
+);
 
 // ─── Health / diagnostics ─────────────────────────────────────────────────────
 app.get("/", (_req: Request, res: Response) => {
