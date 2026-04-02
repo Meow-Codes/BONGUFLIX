@@ -11,8 +11,14 @@ import {
   Cpu,
   Cloud,
   EyeOff,
+  RefreshCw,
 } from "lucide-react";
-import { FaLinkedin as LinkedIn, FaGithub as GitHub, FaTwitter as Twitter, FaInstagram as Insta } from "react-icons/fa";
+import {
+  FaLinkedin as LinkedIn,
+  FaGithub as GitHub,
+  FaTwitter as Twitter,
+  FaInstagram as Insta,
+} from "react-icons/fa";
 
 // ─── Team data ────────────────────────────────────────────────────────────────
 
@@ -21,7 +27,8 @@ type SocialType = "linkedin" | "github" | "twitter" | "instagram";
 type Member = {
   name: string;
   role: string;
-  image: string;
+  image1: string;
+  image2: string;
   linkedin: string;
   github: string;
   social: { type: SocialType; url: string };
@@ -31,7 +38,9 @@ const TEAM: Member[] = [
   {
     name: "KV Modak",
     role: "ML",
-    image: "https://static.wikia.nocookie.net/jujutsu-kaisen/images/5/53/GojoP.png",
+    image1:
+      "https://static.wikia.nocookie.net/jujutsu-kaisen/images/5/53/GojoP.png",
+    image2: "https://static.wikia.nocookie.net/jjba/images/3/3f/JonathanP2.png",
     linkedin: "https://linkedin.com",
     github: "https://github.com",
     social: { type: "twitter", url: "https://twitter.com" },
@@ -39,7 +48,10 @@ const TEAM: Member[] = [
   {
     name: "Barghav B R",
     role: "Backend · Database",
-    image: "https://static.wikia.nocookie.net/jujutsu-kaisen/images/6/64/YujiP.png",
+    image1:
+      "https://static.wikia.nocookie.net/jujutsu-kaisen/images/6/64/YujiP.png",
+    image2:
+      "https://static.wikia.nocookie.net/jjba/images/1/1e/Joseph_Joestar_anime.png",
     linkedin: "https://linkedin.com",
     github: "https://github.com",
     social: { type: "instagram", url: "https://instagram.com" },
@@ -47,15 +59,21 @@ const TEAM: Member[] = [
   {
     name: "Rishik N",
     role: "ML · Recommendation Engine",
-    image: "https://static.wikia.nocookie.net/jujutsu-kaisen/images/e/e4/TojiFushiguroP.png",
+    image1:
+      "https://static.wikia.nocookie.net/jujutsu-kaisen/images/e/e4/TojiFushiguroP.png",
+    image2:
+      "https://static.wikia.nocookie.net/jjba/images/b/b8/Jotaropart6.png",
     linkedin: "https://linkedin.com",
     github: "https://github.com",
-    social: { type: "twitter", url: "https://twitter.com" },
+    social: { type: "instagram", url: "https://instagram.com" },
   },
   {
     name: "Aneesh P",
     role: "ML · Recommendation Engine",
-    image: "https://static.wikia.nocookie.net/jujutsu-kaisen/images/6/65/YutaOkkotsuP_%28Second-Year%29.png",
+    image1:
+      "https://static.wikia.nocookie.net/jujutsu-kaisen/images/6/65/YutaOkkotsuP_%28Second-Year%29.png",
+    image2:
+      "https://static.wikia.nocookie.net/jjba/images/2/28/JOsuke4_infobox_manga.jpg",
     linkedin: "https://linkedin.com",
     github: "https://github.com",
     social: { type: "instagram", url: "https://instagram.com" },
@@ -63,7 +81,10 @@ const TEAM: Member[] = [
   {
     name: "Rithwik M",
     role: "Frontend · UI/UX · Backend",
-    image: "https://static.wikia.nocookie.net/jujutsu-kaisen/images/3/3a/SukunaP.png",
+    image1:
+      "https://static.wikia.nocookie.net/jujutsu-kaisen/images/3/3a/SukunaP.png",
+    image2:
+      "https://static.wikia.nocookie.net/jjba/images/c/c3/Screen_Shot_2020-01-10_at_9.23.23_am.png",
     linkedin: "https://linkedin.com",
     github: "https://github.com",
     social: { type: "twitter", url: "https://twitter.com" },
@@ -105,19 +126,33 @@ const OBJECTIVES = [
 
 // ─── Social icon map ──────────────────────────────────────────────────────────
 
-const SocialIcon = ({ type, size = 14 }: { type: SocialType; size?: number }) => {
-  if (type === "linkedin")  return <LinkedIn size={size} />;
-  if (type === "github")    return <GitHub    size={size} />;
-  if (type === "twitter")   return <Twitter   size={size} />;
+const SocialIcon = ({
+  type,
+  size = 14,
+}: {
+  type: SocialType;
+  size?: number;
+}) => {
+  if (type === "linkedin") return <LinkedIn size={size} />;
+  if (type === "github") return <GitHub size={size} />;
+  if (type === "twitter") return <Twitter size={size} />;
   if (type === "instagram") return <Insta size={size} />;
   return null;
 };
 
 // ─── MemberCard ───────────────────────────────────────────────────────────────
 
-function MemberCard({ member, index }: { member: Member; index: number }) {
+function MemberCard({
+  member,
+  index,
+  activeImage,
+}: {
+  member: Member;
+  index: number;
+  activeImage: "image1" | "image2";
+}) {
   const [hovered, setHovered] = useState(false);
-  const [imgError, setImgError] = useState(!member.image);
+  const [imgError, setImgError] = useState(!member.image1);
 
   const initials = member.name
     .split(" ")
@@ -127,9 +162,8 @@ function MemberCard({ member, index }: { member: Member; index: number }) {
     .toUpperCase();
 
   // Deterministic hue from name
-  const hue = member.name
-    .split("")
-    .reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
+  const hue =
+    member.name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
 
   return (
     <div
@@ -141,7 +175,8 @@ function MemberCard({ member, index }: { member: Member; index: number }) {
         overflow: "hidden",
         background: "#0f0f0f",
         border: `1px solid ${hovered ? "rgba(229,9,20,0.35)" : "rgba(255,255,255,0.07)"}`,
-        transition: "transform 0.32s cubic-bezier(0.4,0,0.2,1), box-shadow 0.32s ease, border-color 0.22s",
+        transition:
+          "transform 0.32s cubic-bezier(0.4,0,0.2,1), box-shadow 0.32s ease, border-color 0.22s",
         transform: hovered ? "translateY(-6px)" : "translateY(0)",
         boxShadow: hovered
           ? "0 20px 56px rgba(0,0,0,0.75), 0 0 0 1px rgba(229,9,20,0.15)"
@@ -150,76 +185,124 @@ function MemberCard({ member, index }: { member: Member; index: number }) {
       }}
     >
       {/* Photo area */}
-      <div style={{ position: "relative", aspectRatio: "1/1", overflow: "hidden", background: `linear-gradient(135deg, hsl(${hue},30%,12%), #0a0a0a)` }}>
-        {!imgError && member.image ? (
+      <div
+        style={{
+          position: "relative",
+          aspectRatio: "1/1",
+          overflow: "hidden",
+          background: `linear-gradient(135deg, hsl(${hue},30%,12%), #0a0a0a)`,
+        }}
+      >
+        {!imgError && member.image1 ? (
           <img
-            src={member.image}
+            src={member[activeImage]}
             alt={member.name}
             onError={() => setImgError(true)}
             style={{
-              width: "100%", height: "100%", objectFit: "cover",
-              objectPosition: "top center", display: "block",
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "top center",
+              display: "block",
               transition: "transform 0.4s ease",
               transform: hovered ? "scale(1.05)" : "scale(1)",
             }}
           />
         ) : (
-          <div style={{
-            width: "100%", height: "100%",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <span style={{
-              fontFamily: "'Bebas Neue', cursive",
-              fontSize: "clamp(36px, 5vw, 52px)",
-              letterSpacing: "0.05em",
-              color: `hsl(${hue},45%,55%)`,
-              opacity: 0.9,
-            }}>
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <span
+              style={{
+                fontFamily: "'Bebas Neue', cursive",
+                fontSize: "clamp(36px, 5vw, 52px)",
+                letterSpacing: "0.05em",
+                color: `hsl(${hue},45%,55%)`,
+                opacity: 0.9,
+              }}
+            >
               {initials}
             </span>
           </div>
         )}
 
         {/* Bottom fade */}
-        <div style={{
-          position: "absolute", inset: 0,
-          background: "linear-gradient(to top, #0f0f0f 0%, transparent 55%)",
-        }} />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(to top, #0f0f0f 0%, transparent 55%)",
+          }}
+        />
 
         {/* Red top accent line — only on hover */}
-        <div style={{
-          position: "absolute", top: 0, left: 0, right: 0, height: "2px",
-          background: "linear-gradient(to right, transparent, #E50914, transparent)",
-          opacity: hovered ? 1 : 0,
-          transition: "opacity 0.25s ease",
-        }} />
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "2px",
+            background:
+              "linear-gradient(to right, transparent, #E50914, transparent)",
+            opacity: hovered ? 1 : 0,
+            transition: "opacity 0.25s ease",
+          }}
+        />
       </div>
 
       {/* Info */}
       <div style={{ padding: "16px 18px 18px" }}>
-        <h3 style={{
-          fontFamily: "'Outfit', sans-serif",
-          fontSize: "15px", fontWeight: 700,
-          color: "#fff", marginBottom: "4px",
-          letterSpacing: "-0.01em", lineHeight: 1.2,
-        }}>
+        <h3
+          style={{
+            fontFamily: "'Outfit', sans-serif",
+            fontSize: "15px",
+            fontWeight: 700,
+            color: "#fff",
+            marginBottom: "4px",
+            letterSpacing: "-0.01em",
+            lineHeight: 1.2,
+          }}
+        >
           {member.name}
         </h3>
-        <p style={{
-          fontSize: "11px", fontWeight: 500,
-          color: "rgba(255,255,255,0.38)",
-          letterSpacing: "0.07em", textTransform: "uppercase",
-          marginBottom: "16px",
-        }}>
+        <p
+          style={{
+            fontSize: "11px",
+            fontWeight: 500,
+            color: "rgba(255,255,255,0.38)",
+            letterSpacing: "0.07em",
+            textTransform: "uppercase",
+            marginBottom: "16px",
+          }}
+        >
           {member.role}
         </p>
 
         {/* Social links */}
         <div style={{ display: "flex", gap: "8px" }}>
           {[
-            { href: member.linkedin, icon: <LinkedIn size={13} />, label: "LinkedIn" },
-            { href: member.github,   icon: <GitHub   size={13} />, label: "GitHub"   },
-            { href: member.social.url, icon: <SocialIcon type={member.social.type} size={13} />, label: member.social.type },
+            {
+              href: member.linkedin,
+              icon: <LinkedIn size={13} />,
+              label: "LinkedIn",
+            },
+            {
+              href: member.github,
+              icon: <GitHub size={13} />,
+              label: "GitHub",
+            },
+            {
+              href: member.social.url,
+              icon: <SocialIcon type={member.social.type} size={13} />,
+              label: member.social.type,
+            },
           ].map(({ href, icon, label }) => (
             <a
               key={label}
@@ -228,14 +311,18 @@ function MemberCard({ member, index }: { member: Member; index: number }) {
               rel="noopener noreferrer"
               title={label}
               style={{
-                width: "30px", height: "30px",
+                width: "30px",
+                height: "30px",
                 borderRadius: "8px",
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.1)",
-                display: "flex", alignItems: "center", justifyContent: "center",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 color: "rgba(255,255,255,0.5)",
                 textDecoration: "none",
-                transition: "background 0.18s, color 0.18s, border-color 0.18s, transform 0.18s",
+                transition:
+                  "background 0.18s, color 0.18s, border-color 0.18s, transform 0.18s",
               }}
               onMouseEnter={(e) => {
                 const el = e.currentTarget;
@@ -273,22 +360,36 @@ function AboutNav() {
   const backLabel = returnTo?.startsWith("/dashboard") ? "Dashboard" : "Home";
 
   return (
-    <nav style={{
-      position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-      height: "64px", padding: "0 4%",
-      display: "flex", alignItems: "center", gap: "20px",
-      background: "rgba(8,8,8,0.94)",
-      backdropFilter: "blur(14px)",
-      borderBottom: "1px solid rgba(255,255,255,0.05)",
-      animation: "navIn 0.6s ease both",
-    }}>
+    <nav
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 100,
+        height: "64px",
+        padding: "0 4%",
+        display: "flex",
+        alignItems: "center",
+        gap: "20px",
+        background: "rgba(8,8,8,0.94)",
+        backdropFilter: "blur(14px)",
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
+        animation: "navIn 0.6s ease both",
+      }}
+    >
       <Link href="/" style={{ textDecoration: "none" }}>
-        <span style={{
-          fontFamily: "'Bebas Neue', cursive",
-          fontSize: "26px", color: "#E50914",
-          letterSpacing: "0.14em",
-          animation: "logoGlow 3.5s ease-in-out infinite",
-        }}>BONGUFLIX</span>
+        <span
+          style={{
+            fontFamily: "'Bebas Neue', cursive",
+            fontSize: "26px",
+            color: "#E50914",
+            letterSpacing: "0.14em",
+            animation: "logoGlow 3.5s ease-in-out infinite",
+          }}
+        >
+          BONGUFLIX
+        </span>
       </Link>
 
       <Link href={backHref} className="nav-back">
@@ -296,12 +397,32 @@ function AboutNav() {
         {backLabel}
       </Link>
 
-      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "9px" }}>
-        <div style={{
-          width: "7px", height: "7px", borderRadius: "50%", background: "#E50914",
-          animation: "pulseRed 2.2s ease-in-out infinite",
-        }} />
-        <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 500 }}>
+      <div
+        style={{
+          marginLeft: "auto",
+          display: "flex",
+          alignItems: "center",
+          gap: "9px",
+        }}
+      >
+        <div
+          style={{
+            width: "7px",
+            height: "7px",
+            borderRadius: "50%",
+            background: "#E50914",
+            animation: "pulseRed 2.2s ease-in-out infinite",
+          }}
+        />
+        <span
+          style={{
+            fontSize: "11px",
+            color: "rgba(255,255,255,0.3)",
+            textTransform: "uppercase",
+            letterSpacing: "0.12em",
+            fontWeight: 500,
+          }}
+        >
           About
         </span>
       </div>
@@ -310,7 +431,14 @@ function AboutNav() {
 }
 
 export default function AboutPage() {
-  const [particles, setParticles] = useState<{ id: number; style: React.CSSProperties }[]>([]);
+  const [particles, setParticles] = useState<
+    { id: number; style: React.CSSProperties }[]
+  >([]);
+  const [activeImage, setActiveImage] = useState<"image1" | "image2">("image1");
+
+  const handleRefresh = () => {
+    setActiveImage(activeImage === "image1" ? "image2" : "image1");
+  };
 
   useEffect(() => {
     setParticles(
@@ -328,7 +456,7 @@ export default function AboutPage() {
           animation: `gentleFloat ${Math.random() * 22 + 16}s linear ${Math.random() * 6}s infinite`,
           pointerEvents: "none" as const,
         },
-      }))
+      })),
     );
   }, []);
 
@@ -405,31 +533,44 @@ export default function AboutPage() {
         }
       `}</style>
 
-      <div style={{
-        minHeight: "100vh",
-        background: "#080808",
-        fontFamily: "'Outfit', sans-serif",
-        color: "#fff",
-        position: "relative",
-        overflowX: "hidden",
-      }}>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#080808",
+          fontFamily: "'Outfit', sans-serif",
+          color: "#fff",
+          position: "relative",
+          overflowX: "hidden",
+        }}
+      >
         {/* Fixed bg */}
-        <div style={{
-          position: "fixed", inset: 0,
-          backgroundImage: "url('https://assets.nflxext.com/ffe/siteui/vlv3/9c5457b8-9ab0-4a04-9fc1-e608d5670f1a/710d74e0-7158-408e-8d9b-23c219dee5df/IN-en-20210719-popsignuptwoweeks-perspective_alpha_website_small.jpg')",
-          backgroundSize: "cover", backgroundPosition: "center",
-          filter: "brightness(0.06) saturate(0.3)",
-          pointerEvents: "none",
-        }} />
-        <div style={{
-          position: "fixed", inset: 0,
-          background: "linear-gradient(to bottom, rgba(8,8,8,0.5), rgba(8,8,8,0.97))",
-          pointerEvents: "none",
-        }} />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundImage:
+              "url('https://assets.nflxext.com/ffe/siteui/vlv3/9c5457b8-9ab0-4a04-9fc1-e608d5670f1a/710d74e0-7158-408e-8d9b-23c219dee5df/IN-en-20210719-popsignuptwoweeks-perspective_alpha_website_small.jpg')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            filter: "brightness(0.06) saturate(0.3)",
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background:
+              "linear-gradient(to bottom, rgba(8,8,8,0.5), rgba(8,8,8,0.97))",
+            pointerEvents: "none",
+          }}
+        />
 
         {/* Particles */}
         <div style={{ position: "fixed", inset: 0, pointerEvents: "none" }}>
-          {particles.map((p) => <div key={p.id} style={p.style} />)}
+          {particles.map((p) => (
+            <div key={p.id} style={p.style} />
+          ))}
         </div>
 
         <Suspense fallback={null}>
@@ -437,47 +578,91 @@ export default function AboutPage() {
         </Suspense>
 
         {/* Page content */}
-        <div style={{
-          position: "relative", zIndex: 1,
-          maxWidth: "1280px", margin: "0 auto",
-          padding: "104px 5% 80px",
-        }}>
-
+        <div
+          style={{
+            position: "relative",
+            zIndex: 1,
+            maxWidth: "1280px",
+            margin: "0 auto",
+            padding: "104px 5% 80px",
+          }}
+        >
           {/* ── Hero ── */}
-          <div style={{ textAlign: "center", marginBottom: "64px", animation: "heroIn 0.8s cubic-bezier(0.16,1,0.3,1) 0.1s both" }}>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: "8px",
-              padding: "5px 16px", borderRadius: "20px",
-              background: "rgba(229,9,20,0.1)", border: "1px solid rgba(229,9,20,0.25)",
-              marginBottom: "22px",
-            }}>
-              <div style={{
-                width: "6px", height: "6px", borderRadius: "50%", background: "#E50914",
-                animation: "pulseRed 1.6s ease-in-out infinite",
-              }} />
-              <span style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.75)" }}>
+          <div
+            style={{
+              textAlign: "center",
+              marginBottom: "64px",
+              animation: "heroIn 0.8s cubic-bezier(0.16,1,0.3,1) 0.1s both",
+            }}
+          >
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "5px 16px",
+                borderRadius: "20px",
+                background: "rgba(229,9,20,0.1)",
+                border: "1px solid rgba(229,9,20,0.25)",
+                marginBottom: "22px",
+              }}
+            >
+              <div
+                style={{
+                  width: "6px",
+                  height: "6px",
+                  borderRadius: "50%",
+                  background: "#E50914",
+                  animation: "pulseRed 1.6s ease-in-out infinite",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: "rgba(255,255,255,0.75)",
+                }}
+              >
                 CS205 · Graph Theory Project · 2025
               </span>
             </div>
 
-            <h1 style={{
-              fontFamily: "'Bebas Neue', cursive",
-              fontSize: "clamp(52px, 9vw, 96px)",
-              letterSpacing: "0.06em", lineHeight: 0.88,
-              marginBottom: "20px",
-            }}>
+            <h1
+              style={{
+                fontFamily: "'Bebas Neue', cursive",
+                fontSize: "clamp(52px, 9vw, 96px)",
+                letterSpacing: "0.06em",
+                lineHeight: 0.88,
+                marginBottom: "20px",
+              }}
+            >
               BONGU<span style={{ color: "#E50914" }}>FLIX</span>
             </h1>
 
-            <p style={{
-              fontSize: "clamp(14px, 1.3vw, 17px)",
-              color: "rgba(255,255,255,0.48)",
-              maxWidth: "620px", margin: "0 auto 14px",
-              lineHeight: 1.75, fontWeight: 300,
-            }}>
-              A full-stack streaming platform built from scratch — featuring a PostgreSQL database of 10,000+ titles, real-time session auth, content recommendation engine, and a pixel-perfect Netflix-inspired interface.
+            <p
+              style={{
+                fontSize: "clamp(14px, 1.3vw, 17px)",
+                color: "rgba(255,255,255,0.48)",
+                maxWidth: "620px",
+                margin: "0 auto 14px",
+                lineHeight: 1.75,
+                fontWeight: 300,
+              }}
+            >
+              A full-stack streaming platform built from scratch — featuring a
+              PostgreSQL database of 10,000+ titles, real-time session auth,
+              content recommendation engine, and a pixel-perfect
+              Netflix-inspired interface.
             </p>
-            <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.22)", letterSpacing: "0.06em" }}>
+            <p
+              style={{
+                fontSize: "12px",
+                color: "rgba(255,255,255,0.22)",
+                letterSpacing: "0.06em",
+              }}
+            >
               Next.js 16 · Express · PostgreSQL · TMDB API · Render · Vercel
             </p>
           </div>
@@ -485,24 +670,49 @@ export default function AboutPage() {
           <div className="section-divider" />
 
           {/* ── Objectives ── */}
-          <div style={{ animation: "heroIn 0.8s cubic-bezier(0.16,1,0.3,1) 0.2s both", marginBottom: "64px" }}>
-            <h2 style={{
-              fontFamily: "'Bebas Neue', cursive",
-              fontSize: "26px", letterSpacing: "0.1em",
-              color: "rgba(255,255,255,0.85)",
-              marginBottom: "28px",
-            }}>
+          <div
+            style={{
+              animation: "heroIn 0.8s cubic-bezier(0.16,1,0.3,1) 0.2s both",
+              marginBottom: "64px",
+            }}
+          >
+            <h2
+              style={{
+                fontFamily: "'Bebas Neue', cursive",
+                fontSize: "26px",
+                letterSpacing: "0.1em",
+                color: "rgba(255,255,255,0.85)",
+                marginBottom: "28px",
+              }}
+            >
               Project Objectives
             </h2>
 
             <div className="obj-grid">
               {OBJECTIVES.map(({ icon: Icon, title, desc }) => (
                 <div key={title} className="obj-card">
-                  <div className="obj-icon"><Icon size={18} /></div>
-                  <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#fff", marginBottom: "8px", letterSpacing: "0.01em" }}>
+                  <div className="obj-icon">
+                    <Icon size={18} />
+                  </div>
+                  <h3
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      color: "#fff",
+                      marginBottom: "8px",
+                      letterSpacing: "0.01em",
+                    }}
+                  >
                     {title}
                   </h3>
-                  <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.4)", lineHeight: 1.7, margin: 0 }}>
+                  <p
+                    style={{
+                      fontSize: "12px",
+                      color: "rgba(255,255,255,0.4)",
+                      lineHeight: 1.7,
+                      margin: 0,
+                    }}
+                  >
                     {desc}
                   </p>
                 </div>
@@ -513,43 +723,112 @@ export default function AboutPage() {
           <div className="section-divider" />
 
           {/* ── Team ── */}
-          <div style={{ animation: "heroIn 0.8s cubic-bezier(0.16,1,0.3,1) 0.35s both" }}>
+          <div
+            style={{
+              animation: "heroIn 0.8s cubic-bezier(0.16,1,0.3,1) 0.35s both",
+            }}
+          >
             <div style={{ marginBottom: "32px" }}>
-              <h2 style={{
-                fontFamily: "'Bebas Neue', cursive",
-                fontSize: "26px", letterSpacing: "0.1em",
-                color: "rgba(255,255,255,0.85)",
-                marginBottom: "6px",
-              }}>
+              <h2
+                style={{
+                  fontFamily: "'Bebas Neue', cursive",
+                  fontSize: "26px",
+                  letterSpacing: "0.1em",
+                  color: "rgba(255,255,255,0.85)",
+                  marginBottom: "6px",
+                }}
+              >
                 The Team
               </h2>
-              <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.3)", fontWeight: 400 }}>
-                Five people. One platform.
-              </p>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    color: "rgba(255,255,255,0.3)",
+                    fontWeight: 400,
+                  }}
+                >
+                  Five people. One platform.
+                </p>
+                <button
+                  onClick={handleRefresh}
+                  title="Shuffle team photos"
+                  style={{
+                    display: "flex",
+                    marginLeft: "auto",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    background: "rgba(255,255,255,0.05)",
+                    color: "rgba(255,255,255,0.5)",
+                    cursor: "pointer",
+                    transition: "background 0.18s, color 0.18s, border-color 0.18s, transform 0.18s",
+                  }}
+                  onMouseEnter={e => {
+                    const el = e.currentTarget;
+                    el.style.background = "rgba(229,9,20,0.15)";
+                    el.style.borderColor = "rgba(229,9,20,0.4)";
+                    el.style.color = "#fff";
+                    el.style.transform = "rotate(45deg)";
+                  }}
+                  onMouseLeave={e => {
+                    const el = e.currentTarget;
+                    el.style.background = "rgba(255,255,255,0.05)";
+                    el.style.borderColor = "rgba(255,255,255,0.1)";
+                    el.style.color = "rgba(255,255,255,0.5)";
+                    el.style.transform = "rotate(0deg)";
+                  }}
+                >
+                  <RefreshCw size={14} />
+                </button>
+              </div>
+              
             </div>
 
             <div className="team-grid">
               {TEAM.map((member, i) => (
-                <MemberCard key={member.name} member={member} index={i} />
+                <MemberCard
+                  key={member.name}
+                  member={member}
+                  index={i}
+                  activeImage={activeImage}
+                />
               ))}
             </div>
           </div>
 
           {/* ── Footer ── */}
-          <div style={{
-            marginTop: "80px", textAlign: "center",
-            borderTop: "1px solid rgba(255,255,255,0.05)",
-            paddingTop: "40px",
-          }}>
-            <div style={{
-              fontFamily: "'Bebas Neue', cursive",
-              fontSize: "18px", color: "rgba(229,9,20,0.5)",
-              letterSpacing: "0.15em", marginBottom: "10px",
-            }}>
+          <div
+            style={{
+              marginTop: "80px",
+              textAlign: "center",
+              borderTop: "1px solid rgba(255,255,255,0.05)",
+              paddingTop: "40px",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "'Bebas Neue', cursive",
+                fontSize: "18px",
+                color: "rgba(229,9,20,0.5)",
+                letterSpacing: "0.15em",
+                marginBottom: "10px",
+              }}
+            >
               BONGUFLIX
             </div>
-            <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.18)", lineHeight: 1.9 }}>
-              Built by 5 IIIT Dharwad students.<br />
+            <p
+              style={{
+                fontSize: "12px",
+                color: "rgba(255,255,255,0.18)",
+                lineHeight: 1.9,
+              }}
+            >
+              Built by 5 IIIT Dharwad students.
+              <br />
               All content metadata belongs to respective rights holders.
             </p>
           </div>
